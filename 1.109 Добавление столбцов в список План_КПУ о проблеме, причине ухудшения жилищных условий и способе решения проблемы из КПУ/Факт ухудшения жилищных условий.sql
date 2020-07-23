@@ -1,0 +1,850 @@
+--Ввод и отображение Факт ухудшения жилищных условий (переселение);
+
+
+/* Структура информации в AFFAIR_EXT_DATA (Дополнительные данные для КПУ)
+
+classifier_num = 120 ROW_NUM = 6 (Факт ухудшения жилищных условий)
+-----------
+data_id - 'уник. ID';
+data_type_id  = 6 'ID типа хранимой информации (клс.120)';
+affair_id -  'Код КПУ из AFFAIR';
+data_n  - код причины Причины ухудшения жилищных условий (справочник 140; classifier_num =140 )
+data_s  - строка примечание
+data_d   - дата ухудшения жилищных условий
+data_version = 0 'Версия (история) хранимой информации (0-последняя, n-предпоследняя)';
+
+classifier_num = 120 ROW_NUM = 7 (Информация о наличии проблемной ситуации)
+---------
+data_id - 'уник. ID';
+data_type_id  = 7 'ID типа хранимой информации (клс.120)';
+affair_id -  'Код КПУ из AFFAIR';
+data_n  - код Проблема (переселение) (справочник 141; classifier_num =141 )
+data_s  - строка примечание
+data_d   - дата возникновения Проблемы
+data_version = 0 'Версия (история) хранимой информации (0-последняя, n-предпоследняя)';
+
+classifier_num = 120 ROW_NUM = 8 (Информация о решении проблемной ситуации)
+---------
+data_id - 'уник. ID';
+data_type_id  = 8 'ID типа хранимой информации (клс.120)';
+affair_id -  'Код КПУ из AFFAIR';
+data_n  - код Способа решения проблемы (переселение)(справочник 142; classifier_num =142 )
+data_s  - строка примечание
+data_d   - дата решения проблемы
+data_version = 0 'Версия (история) хранимой информации (0-последняя, n-предпоследняя)';
+
+*/
+
+
+
+/*==НОВЫЕ ПОЛЯ для отображения в списках ПЛАН КПУ V_PLAN_KPU_LIST  ==========
+Ухудшение жил. условий за 5 лет    UHUD_ZIL_USL - Ухудш ж/усл_ 5 лет
+Причина ухуд. (причина ухудшения); REASON_UHUD_ZIL_USL - Ухудш ж/усл_ причина
+Д_ухуд. (Дата ухудшения);  DATE_UHUD_ZIL_USL - Ухудш ж/усл_ Д
+Примечание_ухуд (Примечание _ухудшения) PRIM_UHUD_ZIL_USL - Ухудш ж/усл_ примечание
+
+Проблема; PROBLEM_PERES - П_Проблема
+Примечание_пробл. (примечание_проблемы) PRIM_PROBLEM_PERES  - П_Проблема_примечание
+Способ реш. пробл. (способ решения проблемы); TYPE_SOLUTION - П_Проблема_решение -- НЕТ
+Д_реш. пробл. (Дата решения проблемы) DATE_SOLUTION         - П_Проблема_Д_решения
+
+Дата проблемы  DATE_PROBLEM_PERES         - П_Проблема_Д
+
+*/
+-- Проверить --
+select rowid ,L.*
+FROM LIST_FIELDS L
+where L.LIST_COD = 17 and L.FIELD_ID=(select Max(FIELD_ID) from LIST_FIELDS where LIST_COD = 17);
+-- Завести в список ПЛАН КПУ V_PLAN_KPU_LIST  List_Cod = 17  
+insert into LIST_FIELDS 
+SELECT 
+ 17 as LIST_COD, 
+(select Max(FIELD_ID)+1 from LIST_FIELDS where LIST_COD = 17) as FIELD_ID, 
+'Ухудш ж/усл_ 5 лет' as FIELD_TITLE, 
+65 as  FIELD_W, 
+1 as FIELD_TYPE, 
+NULL as DICT_NAME, 
+NULL as DICT_FIELD, 
+'UHUD_ZIL_USL' as  FIELD_NAME,
+'V_PLAN_KPU_LIST' as TABLE_NAME, 
+--'AFFAIR_EXT_DATA' as TABLE_NAME, 
+1 as STATUS, 
+sysdate as LAST_CHANGE, 
+0 as DEFAULT_FIELD,
+NULL as SORT_STRING, 
+NULL as ALIGN,
+NULL as GROUP_NUM
+from dual;
+commit;
+-- Проверить --
+select *
+FROM LIST_FIELDS L
+where L.LIST_COD = 17 and L.FIELD_ID=(select Max(FIELD_ID) from LIST_FIELDS where LIST_COD = 17);
+-- Завести в список ПЛАН КПУ V_PLAN_KPU_LIST  List_Cod = 17
+insert into LIST_FIELDS 
+SELECT 
+ 17 as LIST_COD, 
+(select Max(FIELD_ID)+1 from LIST_FIELDS where LIST_COD = 17) as FIELD_ID, 
+'Ухудш ж/усл_ причина' as FIELD_TITLE, 
+80 as  FIELD_W, 
+1 as FIELD_TYPE, 
+NULL as DICT_NAME, 
+NULL as DICT_FIELD, 
+'REASON_UHUD_ZIL_USL' as  FIELD_NAME,
+'V_PLAN_KPU_LIST' as TABLE_NAME, 
+1 as STATUS, 
+sysdate as LAST_CHANGE, 
+0 as DEFAULT_FIELD,
+NULL as SORT_STRING, 
+NULL as ALIGN,
+NULL as GROUP_NUM
+from dual;
+commit;
+-- Проверить --
+select *
+FROM LIST_FIELDS L
+where L.LIST_COD = 17 and L.FIELD_ID=(select Max(FIELD_ID) from LIST_FIELDS where LIST_COD = 17);
+ 
+-- Завести в список ПЛАН КПУ V_PLAN_KPU_LIST  List_Cod = 17 
+insert into LIST_FIELDS 
+SELECT 
+ 17 as LIST_COD, 
+(select Max(FIELD_ID)+1 from LIST_FIELDS where LIST_COD = 17) as FIELD_ID, 
+'Ухудш ж/усл_ Д' as FIELD_TITLE, 
+50 as  FIELD_W, 
+3 as FIELD_TYPE, 
+NULL as DICT_NAME, 
+NULL as DICT_FIELD, 
+'DATE_UHUD_ZIL_USL' as  FIELD_NAME,
+'AFFAIR_EXT_DATA' as TABLE_NAME, 
+1 as STATUS, 
+sysdate as LAST_CHANGE, 
+0 as DEFAULT_FIELD,
+NULL as SORT_STRING, 
+NULL as ALIGN,
+NULL as GROUP_NUM
+from dual;
+commit;
+-- Проверить --
+select *
+FROM LIST_FIELDS L
+where L.LIST_COD = 17 and L.FIELD_ID=(select Max(FIELD_ID) from LIST_FIELDS where LIST_COD = 17);
+-- Завести в список ПЛАН КПУ V_PLAN_KPU_LIST  List_Cod = 17 
+insert into LIST_FIELDS 
+SELECT 
+ 17 as LIST_COD, 
+(select Max(FIELD_ID)+1 from LIST_FIELDS where LIST_COD = 17) as FIELD_ID, 
+'Ухудш ж/усл_ примечание' as FIELD_TITLE, 
+65 as  FIELD_W, 
+1 as FIELD_TYPE, 
+NULL as DICT_NAME, 
+NULL as DICT_FIELD, 
+'PRIM_UHUD_ZIL_USL' as  FIELD_NAME,
+'AFFAIR_EXT_DATA' as TABLE_NAME, 
+1 as STATUS, 
+sysdate as LAST_CHANGE, 
+0 as DEFAULT_FIELD,
+NULL as SORT_STRING, 
+NULL as ALIGN,
+NULL as GROUP_NUM
+from dual;
+commit;
+-- Проверить --
+select *
+FROM LIST_FIELDS L
+where L.LIST_COD = 17 and L.FIELD_ID=(select Max(FIELD_ID) from LIST_FIELDS where LIST_COD = 17);
+-- Завести в список ПЛАН КПУ V_PLAN_KPU_LIST  List_Cod = 17  
+insert into LIST_FIELDS 
+SELECT 
+ 17 as LIST_COD, 
+(select Max(FIELD_ID)+1 from LIST_FIELDS where LIST_COD = 17) as FIELD_ID, 
+'П_Проблема' as FIELD_TITLE, 
+80 as  FIELD_W, 
+1 as FIELD_TYPE, 
+NULL as DICT_NAME, 
+NULL as DICT_FIELD, 
+'PROBLEM_PERES' as  FIELD_NAME,
+'V_PLAN_KPU_LIST' as TABLE_NAME, 
+--'AFFAIR_EXT_DATA' as TABLE_NAME, 
+1 as STATUS, 
+sysdate as LAST_CHANGE, 
+0 as DEFAULT_FIELD,
+NULL as SORT_STRING, 
+NULL as ALIGN,
+NULL as GROUP_NUM
+from dual;
+commit;
+-- Проверить --
+select *
+FROM LIST_FIELDS L
+where L.LIST_COD = 17 and L.FIELD_ID=(select Max(FIELD_ID) from LIST_FIELDS where LIST_COD = 17); 
+
+-- Завести в список ПЛАН КПУ V_PLAN_KPU_LIST  List_Cod = 17  
+insert into LIST_FIELDS 
+SELECT 
+ 17 as LIST_COD, 
+(select Max(FIELD_ID)+1 from LIST_FIELDS where LIST_COD = 17) as FIELD_ID, 
+'П_Проблема_примечание' as FIELD_TITLE, 
+80 as  FIELD_W, 
+1 as FIELD_TYPE, 
+NULL as DICT_NAME, 
+NULL as DICT_FIELD, 
+'PRIM_PROBLEM_PERES' as  FIELD_NAME,
+'AFFAIR_EXT_DATA' as TABLE_NAME, 
+1 as STATUS, 
+sysdate as LAST_CHANGE, 
+0 as DEFAULT_FIELD,
+NULL as SORT_STRING, 
+NULL as ALIGN,
+NULL as GROUP_NUM
+from dual;
+commit;
+-- Проверить --
+select *
+FROM LIST_FIELDS L
+where L.LIST_COD = 17 and L.FIELD_ID=(select Max(FIELD_ID) from LIST_FIELDS where LIST_COD = 17); 
+
+/*
+-- Завести в список ПЛАН КПУ V_PLAN_KPU_LIST  List_Cod = 17  
+insert into LIST_FIELDS 
+SELECT 
+ 17 as LIST_COD, 
+(select Max(FIELD_ID)+1 from LIST_FIELDS where LIST_COD = 17) as FIELD_ID, 
+'П_Проблема_решение' as FIELD_TITLE, 
+80 as  FIELD_W, 
+1 as FIELD_TYPE, 
+NULL as DICT_NAME, 
+NULL as DICT_FIELD, 
+'TYPE_SOLUTION' as  FIELD_NAME,
+'V_PLAN_KPU_LIST' as TABLE_NAME, 
+--'AFFAIR_EXT_DATA' as TABLE_NAME, 
+1 as STATUS, 
+sysdate as LAST_CHANGE, 
+0 as DEFAULT_FIELD,
+NULL as SORT_STRING, 
+NULL as ALIGN,
+NULL as GROUP_NUM
+from dual;
+commit;
+-- Проверить --
+select *
+FROM LIST_FIELDS L
+where L.LIST_COD = 17 and L.FIELD_ID=(select Max(FIELD_ID) from LIST_FIELDS where LIST_COD = 17); 
+*/
+
+
+-- Завести в список ПЛАН КПУ V_PLAN_KPU_LIST  List_Cod = 17  
+insert into LIST_FIELDS 
+SELECT 
+ 17 as LIST_COD, 
+(select Max(FIELD_ID)+1 from LIST_FIELDS where LIST_COD = 17) as FIELD_ID, 
+'П_Проблема_Д' as FIELD_TITLE, 
+60 as  FIELD_W, 
+3 as FIELD_TYPE, 
+NULL as DICT_NAME, 
+NULL as DICT_FIELD, 
+'DATE_PROBLEM_PERES' as  FIELD_NAME,
+'AFFAIR_EXT_DATA' as TABLE_NAME, 
+1 as STATUS, 
+sysdate as LAST_CHANGE, 
+0 as DEFAULT_FIELD,
+NULL as SORT_STRING, 
+NULL as ALIGN,
+NULL as GROUP_NUM
+from dual;
+commit;
+-- Проверить --
+select *
+FROM LIST_FIELDS L
+where L.LIST_COD = 17 and L.FIELD_ID=(select Max(FIELD_ID) from LIST_FIELDS where LIST_COD = 17); 
+
+-- Завести в список ПЛАН КПУ V_PLAN_KPU_LIST  List_Cod = 17  
+insert into LIST_FIELDS 
+SELECT 
+ 17 as LIST_COD, 
+(select Max(FIELD_ID)+1 from LIST_FIELDS where LIST_COD = 17) as FIELD_ID, 
+'П_Проблема_Д_решения' as FIELD_TITLE, 
+60 as  FIELD_W, 
+3 as FIELD_TYPE, 
+NULL as DICT_NAME, 
+NULL as DICT_FIELD, 
+'DATE_SOLUTION' as  FIELD_NAME,
+--'V_AFFAIRS_LIST' as TABLE_NAME, 
+'AFFAIR_EXT_DATA' as TABLE_NAME, 
+1 as STATUS, 
+sysdate as LAST_CHANGE, 
+0 as DEFAULT_FIELD,
+NULL as SORT_STRING, 
+NULL as ALIGN,
+NULL as GROUP_NUM
+from dual;
+commit;
+-- Проверить --
+select *
+FROM LIST_FIELDS L
+where L.LIST_COD = 17 and L.FIELD_ID=(select Max(FIELD_ID) from LIST_FIELDS where LIST_COD = 17); 
+
+-- =============== ОТБОР по новым полям ========================
+/*
+Причина ухудшения Да /нет - Ухудш ж/усл_ причина_наличие
+Дата ухудшения    Да /нет - Ухудш ж/усл_ Д_наличие
+Примечание ухудшения  Да /нет - Ухудш ж/усл_ примечание_наличие
+Наличие проблемной ситуации   Да /нет - П_Проблема_наличие
+Решение проблемной ситуации   Да /нет - П_Проблема_решение_наличие
+Дата решения   Да /нет - П_Проблема_Д решения_наличие
+П_Проблема_примечание_наличие  Да /нет 
+*/
+ -- =============Условия отбора по Причина ухудшения Да /нет ==============
+-- Проверить --
+select rowid ,l.*
+from LIST_CONDITIONS l
+where COND_ID=6005 and 
+LIST_COD = 17
+-- Завести
+insert into LIST_CONDITIONS 
+SELECT 
+   6005  as COND_ID, --!!
+   17 as LIST_COD, 
+   'Ухудш ж/усл_ причина_наличие' as COND_NAME, 
+   2 as COND_TYPE, --выбор из списка
+   sysdate as  LAST_CHANGE,
+   (select max(COND_GROUP) + 10 from LIST_CONDITIONS where LIST_COD = 17 )  as COND_GROUP, --Новая группа
+   1 as STATUS from dual;
+   commit;
+-- Проверить --
+select *
+from LIST_CONDITIONS
+where COND_ID=6005 and 
+LIST_COD = 17
+
+--====== Завести
+INSERT INTO OPERATION_TYPES 
+(
+SELECT 
+6005 as COND_ID, --!!
+17 as LIST_COD,
+1 as OPERATION_COD, 
+'=' as OPERATION_NAME,   
+1 as FIELD_TYPE , -- number т.к. CLASSIFIER.CLASSIFIER_NUM=8 (Да/Нет) вернет (1/2) и 'NVL2(pkg_affair.get_affair_ext_data_d (affair.affair_id,9,0),1,2)' вернет (1/2)
+'AFFAIR'  as TABLE_NAME,
+'NVL2(pkg_affair.get_affair_ext_data_n(affair.affair_id,pkg_affair.get_uhud_type_id,0),1,2)'  as FIELD_NAME, --тут менять ...._type_id
+'CLASSIFIER_NUM=8 and DELETED=0'
+ as DICT_WHERE,
+'CLASSIFIER' as DICT_NAME,
+'SHORT_NAME1 /*&& ,ROW_NUM ID*/' as DICT_FIELD_NAME,
+NULL as FIELD_VALUE, 
+sysdate as LAST_CHANGE, 
+NULL as UNIQUE_COND_TBL 
+from dual
+);
+commit;
+-- Проверить что вставили  
+select t.*,t.rowid  from OPERATION_TYPES t
+where 
+t.COND_ID =6005
+and t.list_cod=17
+
+ -- =============Условия отбора по Дата ухудшения    Да /нет ==============
+-- Проверить --
+select *
+from LIST_CONDITIONS
+where COND_ID=6006 and LIST_COD = 17
+-- Завести
+insert into LIST_CONDITIONS 
+SELECT 
+   6006  as COND_ID, --!!
+   17 as LIST_COD, 
+   'Ухудш ж/усл_Д_наличие' as COND_NAME, 
+   2 as COND_TYPE, --выбор из списка
+   sysdate as  LAST_CHANGE,
+   (select max(COND_GROUP) from LIST_CONDITIONS where LIST_COD = 17 )  as COND_GROUP, --текущая группа
+   1 as STATUS from dual;
+   commit;
+-- Проверить --
+select *
+from LIST_CONDITIONS
+where COND_ID=6006 and 
+LIST_COD = 17
+
+--====== Завести
+INSERT INTO OPERATION_TYPES 
+(
+SELECT 
+6006 as COND_ID, --!!
+17 as LIST_COD,
+1 as OPERATION_COD, 
+'=' as OPERATION_NAME,   
+1 as FIELD_TYPE , -- number 
+'AFFAIR'  as TABLE_NAME,
+'NVL2(pkg_affair.get_affair_ext_data_d(affair.affair_id,pkg_affair.get_uhud_type_id,0),1,2)'  as FIELD_NAME, --тут менять ...._type_id
+'CLASSIFIER_NUM=8 and DELETED=0'
+ as DICT_WHERE,
+'CLASSIFIER' as DICT_NAME,
+'SHORT_NAME1 /*&& ,ROW_NUM ID*/' as DICT_FIELD_NAME,
+NULL as FIELD_VALUE, 
+sysdate as LAST_CHANGE, 
+NULL as UNIQUE_COND_TBL 
+from dual
+);
+commit;
+-- Проверить что вставили  
+select t.*,t.rowid  from OPERATION_TYPES t
+where 
+t.COND_ID =6006
+and t.list_cod=17
+
+
+ -- =============Условия отбора по Примечание ухудшения   Да /нет ==============
+-- Проверить --
+select *
+from LIST_CONDITIONS
+where COND_ID=6007 and LIST_COD = 17
+-- Завести
+insert into LIST_CONDITIONS 
+SELECT 
+   6007  as COND_ID, --!!
+   17 as LIST_COD, 
+   'Ухудш ж/усл_ примечание_наличие' as COND_NAME, 
+   2 as COND_TYPE, --выбор из списка
+   sysdate as  LAST_CHANGE,
+   (select max(COND_GROUP) from LIST_CONDITIONS where LIST_COD = 17 )  as COND_GROUP, --текущая группа
+   1 as STATUS from dual;
+   commit;
+-- Проверить --
+select *
+from LIST_CONDITIONS
+where COND_ID=6007 and 
+LIST_COD = 17
+
+--====== Завести
+INSERT INTO OPERATION_TYPES 
+(
+SELECT 
+6007 as COND_ID, --!!
+17 as LIST_COD,
+1 as OPERATION_COD, 
+'=' as OPERATION_NAME,   
+1 as FIELD_TYPE , -- number 
+'AFFAIR'  as TABLE_NAME,
+'NVL2(pkg_affair.get_affair_ext_data_s(affair.affair_id,pkg_affair.get_uhud_type_id,0),1,2)'  as FIELD_NAME, --тут менять ...._type_id
+'CLASSIFIER_NUM=8 and DELETED=0'
+ as DICT_WHERE,
+'CLASSIFIER' as DICT_NAME,
+'SHORT_NAME1 /*&& ,ROW_NUM ID*/' as DICT_FIELD_NAME,
+NULL as FIELD_VALUE, 
+sysdate as LAST_CHANGE, 
+NULL as UNIQUE_COND_TBL 
+from dual
+);
+commit;
+-- Проверить что вставили  
+select t.*,t.rowid  from OPERATION_TYPES t
+where 
+t.COND_ID =6007
+and t.list_cod=17
+
+
+ -- =============Условия отбора по Наличие проблемной ситуации   Да /нет ==============
+-- Проверить --
+select *
+from LIST_CONDITIONS
+where COND_ID=6008 and LIST_COD = 17
+-- Завести
+insert into LIST_CONDITIONS 
+SELECT 
+   6008  as COND_ID, --!!
+   17 as LIST_COD, 
+   'П_Проблема_наличие' as COND_NAME, 
+   2 as COND_TYPE, --выбор из списка
+   sysdate as  LAST_CHANGE,
+   (select max(COND_GROUP) +10 from LIST_CONDITIONS where LIST_COD = 17 )  as COND_GROUP, --Новая группа
+   1 as STATUS from dual;
+   commit;
+-- Проверить --
+select *
+from LIST_CONDITIONS
+where COND_ID=6008 and 
+LIST_COD = 17
+
+--====== Завести
+INSERT INTO OPERATION_TYPES 
+(
+SELECT 
+6008 as COND_ID, --!!
+17 as LIST_COD,
+1 as OPERATION_COD, 
+'=' as OPERATION_NAME,   
+1 as FIELD_TYPE , -- number 
+'AFFAIR'  as TABLE_NAME,
+'DECODE(pkg_affair.get_affair_ext_data_ver(affair.affair_id,pkg_affair.get_problem_type_id),0,2,1)'  as FIELD_NAME, --тут менять ...._type_id
+'CLASSIFIER_NUM=8 and DELETED=0'
+ as DICT_WHERE,
+'CLASSIFIER' as DICT_NAME,
+'SHORT_NAME1 /*&& ,ROW_NUM ID*/' as DICT_FIELD_NAME,
+NULL as FIELD_VALUE, 
+sysdate as LAST_CHANGE, 
+NULL as UNIQUE_COND_TBL 
+from dual
+);
+commit;
+-- Проверить что вставили  
+select t.*,t.rowid  from OPERATION_TYPES t
+where 
+t.COND_ID =6008
+and t.list_cod=17
+
+ -- =============Условия отбора по Решение проблемной ситуации   Да /нет ==============
+-- Проверить --
+select *
+from LIST_CONDITIONS
+where COND_ID=6009 and LIST_COD = 17
+-- Завести
+insert into LIST_CONDITIONS 
+SELECT 
+   6009  as COND_ID, --!!
+   17 as LIST_COD, 
+   'П_Проблема_решение_наличие' as COND_NAME, 
+   2 as COND_TYPE, --выбор из списка
+   sysdate as  LAST_CHANGE,
+   (select max(COND_GROUP) from LIST_CONDITIONS where LIST_COD = 17 )  as COND_GROUP, --текущая группа
+   1 as STATUS from dual;
+   commit;
+-- Проверить --
+select *
+from LIST_CONDITIONS
+where COND_ID=6009 and 
+LIST_COD = 17
+
+--====== Завести
+INSERT INTO OPERATION_TYPES 
+(
+SELECT 
+6009 as COND_ID, --!!
+17 as LIST_COD,
+1 as OPERATION_COD, 
+'=' as OPERATION_NAME,   
+1 as FIELD_TYPE , -- number 
+'AFFAIR'  as TABLE_NAME,
+'DECODE(pkg_affair.get_affair_ext_data_ver(affair.affair_id,pkg_affair.get_solution_type_id),0,2,1)'  as FIELD_NAME, --тут менять ...._type_id
+'CLASSIFIER_NUM=8 and DELETED=0'
+ as DICT_WHERE,
+'CLASSIFIER' as DICT_NAME,
+'SHORT_NAME1 /*&& ,ROW_NUM ID*/' as DICT_FIELD_NAME,
+NULL as FIELD_VALUE, 
+sysdate as LAST_CHANGE, 
+NULL as UNIQUE_COND_TBL 
+from dual
+);
+commit;
+-- Проверить что вставили  
+select t.*,t.rowid  from OPERATION_TYPES t
+where 
+t.COND_ID =6009
+and t.list_cod=17
+
+ -- =============Условия отбора по Дата решения   Да /нет ==============
+-- Проверить --
+select *
+from LIST_CONDITIONS
+where COND_ID=6010 and LIST_COD = 17
+-- Завести
+insert into LIST_CONDITIONS 
+SELECT 
+   6010  as COND_ID, --!!
+   17 as LIST_COD, 
+   'П_Проблема_Д решения_наличие' as COND_NAME, 
+   2 as COND_TYPE, --выбор из списка
+   sysdate as  LAST_CHANGE,
+   (select max(COND_GROUP) from LIST_CONDITIONS where LIST_COD = 17 )  as COND_GROUP, --текущая группа
+   1 as STATUS from dual;
+   commit;
+-- Проверить --
+select *
+from LIST_CONDITIONS
+where COND_ID=6010 and 
+LIST_COD = 17
+
+--====== Завести
+INSERT INTO OPERATION_TYPES 
+(
+SELECT 
+6010 as COND_ID, --!!
+17 as LIST_COD,
+1 as OPERATION_COD, 
+'=' as OPERATION_NAME,   
+1 as FIELD_TYPE , -- number 
+'AFFAIR'  as TABLE_NAME,
+'NVL2(pkg_affair.get_affair_ext_data_d(affair.affair_id,pkg_affair.get_solution_type_id,0),1,2)'  as FIELD_NAME, --тут менять ...._type_id
+'CLASSIFIER_NUM=8 and DELETED=0'
+ as DICT_WHERE,
+'CLASSIFIER' as DICT_NAME,
+'SHORT_NAME1 /*&& ,ROW_NUM ID*/' as DICT_FIELD_NAME,
+NULL as FIELD_VALUE, 
+sysdate as LAST_CHANGE, 
+NULL as UNIQUE_COND_TBL 
+from dual
+);
+commit;
+-- Проверить что вставили  
+select t.*,t.rowid  from OPERATION_TYPES t
+where 
+ t.list_cod=17
+ order by t.cond_id desc
+
+
+ -- =============Условия отбора по Ухудшение жил. условий за 5 лет   ==============
+ /*
+  Ухудш ж/усл_ 5 лет
+ Нет инф
+да, < 5лет
+да, > 5лет
+ */
+-- Новая функция для отбора по Ухудшение жил. условий за 5 лет 
+-- pkg_affair.get_affair_ext_data_uhud5year(p_affair_id IN NUMBER) RETURN NUMBER;
+ 
+
+-- Проверить --
+select *
+from LIST_CONDITIONS
+where COND_ID=6011 and LIST_COD = 17
+-- Завести
+insert into LIST_CONDITIONS 
+SELECT 
+   6011  as COND_ID, --!!
+   17 as LIST_COD, 
+   'Ухудш ж/усл_ 5 лет' as COND_NAME, 
+   2 as COND_TYPE, --выбор из списка
+   sysdate as  LAST_CHANGE,
+   (select max(COND_GROUP)-10 from LIST_CONDITIONS where LIST_COD = 17 )  as COND_GROUP, --предыдущая группа
+   1 as STATUS from dual;
+   commit;
+-- Проверить --
+select *
+from LIST_CONDITIONS
+where COND_ID=6011 
+and LIST_COD = 17
+
+--====== Завести
+INSERT INTO OPERATION_TYPES 
+(
+SELECT 
+6011 as COND_ID, --!!
+17 as LIST_COD,
+1 as OPERATION_COD, 
+'=' as OPERATION_NAME,   
+1 as FIELD_TYPE , -- number 
+'AFFAIR'  as TABLE_NAME,
+'pkg_affair.get_affair_ext_data_uhud5year(affair.affair_id)'  as FIELD_NAME, 
+'CLASSIFIER_NUM=144 and DELETED=0'
+ as DICT_WHERE,
+'CLASSIFIER_KURS3' as DICT_NAME,
+'SHORT_NAME1 /*&& ,ROW_NUM ID*/' as DICT_FIELD_NAME,
+NULL as FIELD_VALUE, 
+sysdate as LAST_CHANGE, 
+NULL as UNIQUE_COND_TBL 
+from dual
+);
+commit;
+-- Проверить что вставили  
+select t.*,t.rowid  from OPERATION_TYPES t
+where
+t.COND_ID = 6011
+and 
+t.list_cod=17
+
+ -- =============Условия отбора по П_Проблема_Д   ==============
+select *
+from LIST_CONDITIONS
+where COND_ID>=6020 and LIST_COD = 17
+-- Завести
+insert into LIST_CONDITIONS 
+SELECT 
+   6020  as COND_ID, --!!
+   17 as LIST_COD, 
+   'П_Проблема_Д' as COND_NAME, 
+   1 as COND_TYPE, --выбор из списка
+   sysdate as  LAST_CHANGE,
+   (select max(COND_GROUP)+10 from LIST_CONDITIONS where LIST_COD = 17 )  as COND_GROUP, --предыдущая группа
+   1 as STATUS from dual;
+   commit;
+
+insert into LIST_CONDITIONS 
+SELECT 
+   6021  as COND_ID, --!!
+   17 as LIST_COD, 
+   'П_Проблема_Д' as COND_NAME, 
+   1 as COND_TYPE, --выбор из списка
+   sysdate as  LAST_CHANGE,
+   (select max(COND_GROUP) from LIST_CONDITIONS where LIST_COD = 17 )  as COND_GROUP,
+   1 as STATUS from dual;
+   commit;
+insert into LIST_CONDITIONS 
+SELECT 
+   6022  as COND_ID, --!!
+   17 as LIST_COD, 
+   'П_Проблема_Д' as COND_NAME, 
+   1 as COND_TYPE, --выбор из списка
+   sysdate as  LAST_CHANGE,
+   (select max(COND_GROUP) from LIST_CONDITIONS where LIST_COD = 17 )  as COND_GROUP,
+   1 as STATUS from dual;
+   commit;
+insert into LIST_CONDITIONS 
+SELECT 
+   6023  as COND_ID, --!!
+   17 as LIST_COD, 
+   'П_Проблема_Д' as COND_NAME, 
+   1 as COND_TYPE, --выбор из списка
+   sysdate as  LAST_CHANGE,
+   (select max(COND_GROUP) from LIST_CONDITIONS where LIST_COD = 17 )  as COND_GROUP,
+   1 as STATUS from dual;
+   commit;   
+ 
+insert into LIST_CONDITIONS 
+SELECT 
+   6024  as COND_ID, --!!
+   17 as LIST_COD, 
+   'П_Проблема_Д' as COND_NAME, 
+   1 as COND_TYPE, --выбор из списка
+   sysdate as  LAST_CHANGE,
+   (select max(COND_GROUP) from LIST_CONDITIONS where LIST_COD = 17 )  as COND_GROUP,
+   1 as STATUS from dual;
+   commit; 
+
+insert into LIST_CONDITIONS 
+SELECT 
+   6025  as COND_ID, --!!
+   17 as LIST_COD, 
+   'П_Проблема_Д' as COND_NAME, 
+   1 as COND_TYPE, --выбор из списка
+   sysdate as  LAST_CHANGE,
+   (select max(COND_GROUP) from LIST_CONDITIONS where LIST_COD = 17 )  as COND_GROUP,
+   1 as STATUS from dual;
+   commit; 
+--------------------------------------------------------------------------------
+INSERT INTO OPERATION_TYPES 
+(
+SELECT 
+6020 as COND_ID, --!!
+17 as LIST_COD,
+1 as OPERATION_COD, 
+'=' as OPERATION_NAME,   
+3 as FIELD_TYPE , -- number 
+'AFFAIR'  as TABLE_NAME,
+'pkg_affair.get_affair_ext_data_d(affair.affair_id,pkg_affair.get_problem_type_id)'  as FIELD_NAME, 
+NULL as DICT_WHERE,
+NULL as DICT_NAME,
+NULL as DICT_FIELD_NAME,
+NULL as FIELD_VALUE, 
+sysdate as LAST_CHANGE, 
+NULL as UNIQUE_COND_TBL 
+from dual
+);
+commit;
+
+INSERT INTO OPERATION_TYPES 
+(
+SELECT 
+6021 as COND_ID, --!!
+17 as LIST_COD,
+2 as OPERATION_COD, 
+'>' as OPERATION_NAME,   
+3 as FIELD_TYPE , -- number 
+'AFFAIR'  as TABLE_NAME,
+'pkg_affair.get_affair_ext_data_d(affair.affair_id,pkg_affair.get_problem_type_id)'  as FIELD_NAME, 
+NULL as DICT_WHERE,
+NULL as DICT_NAME,
+NULL as DICT_FIELD_NAME,
+NULL as FIELD_VALUE, 
+sysdate as LAST_CHANGE, 
+NULL as UNIQUE_COND_TBL 
+from dual
+);
+commit;
+
+INSERT INTO OPERATION_TYPES 
+(
+SELECT 
+6022 as COND_ID, --!!
+17 as LIST_COD,
+3 as OPERATION_COD, 
+'>=' as OPERATION_NAME,   
+3 as FIELD_TYPE , -- number 
+'AFFAIR'  as TABLE_NAME,
+'pkg_affair.get_affair_ext_data_d(affair.affair_id,pkg_affair.get_problem_type_id)'  as FIELD_NAME, 
+NULL as DICT_WHERE,
+NULL as DICT_NAME,
+NULL as DICT_FIELD_NAME,
+NULL as FIELD_VALUE, 
+sysdate as LAST_CHANGE, 
+NULL as UNIQUE_COND_TBL 
+from dual
+);
+commit;
+
+INSERT INTO OPERATION_TYPES 
+(
+SELECT 
+6023 as COND_ID, --!!
+17 as LIST_COD,
+4 as OPERATION_COD, 
+'<' as OPERATION_NAME,   
+3 as FIELD_TYPE , -- number 
+'AFFAIR'  as TABLE_NAME,
+'pkg_affair.get_affair_ext_data_d(affair.affair_id,pkg_affair.get_problem_type_id)'  as FIELD_NAME,  
+NULL as DICT_WHERE,
+NULL as DICT_NAME,
+NULL as DICT_FIELD_NAME,
+NULL as FIELD_VALUE, 
+sysdate as LAST_CHANGE, 
+NULL as UNIQUE_COND_TBL 
+from dual
+);
+commit;
+
+INSERT INTO OPERATION_TYPES 
+(
+SELECT 
+6024 as COND_ID, --!!
+17 as LIST_COD,
+5 as OPERATION_COD, 
+'<=' as OPERATION_NAME,   
+3 as FIELD_TYPE , -- number 
+'AFFAIR'  as TABLE_NAME,
+'pkg_affair.get_affair_ext_data_d(affair.affair_id,pkg_affair.get_problem_type_id)'  as FIELD_NAME, 
+NULL as DICT_WHERE,
+NULL as DICT_NAME,
+NULL as DICT_FIELD_NAME,
+NULL as FIELD_VALUE, 
+sysdate as LAST_CHANGE, 
+NULL as UNIQUE_COND_TBL 
+from dual
+);
+commit;
+
+INSERT INTO OPERATION_TYPES 
+(
+SELECT 
+6025 as COND_ID, --!!
+17 as LIST_COD,
+6 as OPERATION_COD, 
+'<>' as OPERATION_NAME,   
+3 as FIELD_TYPE , -- number 
+'AFFAIR'  as TABLE_NAME,
+'pkg_affair.get_affair_ext_data_d(affair.affair_id,pkg_affair.get_problem_type_id)'  as FIELD_NAME, 
+NULL as DICT_WHERE,
+NULL as DICT_NAME,
+NULL as DICT_FIELD_NAME,
+NULL as FIELD_VALUE, 
+sysdate as LAST_CHANGE, 
+NULL as UNIQUE_COND_TBL 
+from dual
+);
+commit;
+
+-- Проверить что вставили  
+select t.*,t.rowid  from OPERATION_TYPES t
+where
+FIELD_TYPE=3 
+and 
+t.list_cod=17
+order by COND_ID desc
