@@ -1,0 +1,90 @@
+select  *  from BTI_DATA.FKMN@DBLINK_DZR.ACG.RU kmn  where unom =16721 kad_n  is not null
+
+select * from  ehd.register@DBLINK_DZR.ACG.RU r
+
+select  pkg_bti_ehd.Get_Ehd_Cadast_for_Kmn(   '77:04:0001018:2070', '3') from dual
+     
+   select b.id, --b.area, b.type, b.OBJECT_ID, 
+    r.cadastral_number, 
+    l.APARTMENT, 
+    Decode(TRIM(e.NUM_FLAT),NULL,Trim(Substr(lower(l.APARTMENT),Instr(Lower(l.APARTMENT),'к.')+2)),TRIM(e.NUM_FLAT )) as NUM_FLAT
+   from ehd.building_parcel@DBLINK_DZR.ACG.RU b
+    join ehd.register@DBLINK_DZR.ACG.RU r on r.building_parcel_id = b.id 
+    join ehd.location@DBLINK_DZR.ACG.RU l on l.building_parcel_id = b.id 
+    left join ehd.egrp@DBLINK_DZR.ACG.RU e on e.num_cadnum = r.cadastral_number and e.actual is null 
+   where b.actual is null and r.cadastral_number_oks ='77:04:0001018:1028' 
+
+
+
+ select-- kva.*,  kva.kl,
+                    adr.adres  as bti_adres    --адрес помещения
+                    ,kmn.kad_n as bti_cadast_num_kmn --кадастровы    номер комнаты
+                    ,adr.KAD_ZU as bti_kad_z--земельный участок
+                    ,kva.kad_n as bti_cadast_num_kva --кадастровы    номер помещения
+                    ,adr.kad_n  as bti_cadast_num_build --кадастровый номер задния
+                    ,kva.unom 
+                    ,kva.unkv
+                    ,kva.kvnom as  bti_ap_num --Номер помещения   
+                    ,kmn.kmi as  bti_km_num --Номер комнаты
+                    ,kmn.npp as  bti_km_npp --Номер комнаты п/п 
+                    ,kmn.et  as bti_kmn_et--этаж-
+                    ,trim(to_char(l_bti_kmn_opl, '999999999990D9','nls_numeric_characters = '',.'''  ))   as bti_kmn_opl --Площадь комнаты, кв.м
+                    ,trim(to_char(l_bti_kmn_gpl, '999999999990D9','nls_numeric_characters = '',.'''  ))   as bti_kmn_gpl --Площадьжилая, кв.м
+                    ,trim(to_char(l_bti_kmn_ppl, '999999999990D9','nls_numeric_characters = '',.'''  ))   as bti_kmn_ppl --Площадь приведенная, кв.м
+                    ,trim(to_char(l_bti_kmn_unpl, '999999999990D9','nls_numeric_characters = '',.'''  ))  as bti_kmn_unpl --Площадь комнаты(для нежилых), кв.м
+                    ,trim(to_char(l_bti_opl, '999999999990D9','nls_numeric_characters = '',.'''  ))   as bti_opl --Площадь квартиры, кв.м
+                    ,trim(to_char(l_bti_gpl, '999999999990D9','nls_numeric_characters = '',.'''  ))   as bti_gpl --Площадьжилая квартиры, кв.м
+                    ,trim(to_char(l_bti_ppl, '999999999990D9','nls_numeric_characters = '',.'''  ))   as bti_ppl --Площадь приведенная квартиры, кв.м
+                    ,pkg_bti_ehd. Get_cls_data(86,  kmn.nz, null)   as  bti_naz_kmn   --назначение комнаты
+                   ,pkg_bti_ehd. Get_cls_data(163,  kmn.plov, null)   as  bti_type_kmn --тип площади  
+                    ,'Выверен'   stsobj --статус объекта
+                from  BTI_DATA.FKMN@DBLINK_DZR.ACG.RU kmn 
+                        join BTI_DATA.FKVA@DBLINK_DZR.ACG.RU kva on kva.Unom=kmn.unom and kva.unkv=kmn.unkv  
+                        join BTI_DATA.FADS@DBLINK_DZR.ACG.RU adr on adr.unom= kva.unom  and adr.main_adr=1   and adr.adr_type in (26796, 26795)  
+                        
+       select  pkg_bti_ehd.Get_Ehd_Cadast_for_Room('77:04:0001018:1028' ,'74')   from dual              
+                        
+                        
+     select b.id, --b.area, b.type, b.OBJECT_ID, 
+   
+    r.cadastral_number,r.cadastral_number_flat, 
+    Trim(Substr(lower(l.APARTMENT),Instr(Lower(l.APARTMENT),' ')+1)) as ap
+    ,regexp_substr( Trim(Substr(lower(l.APARTMENT),Instr(Lower(l.APARTMENT),' ')+1)), '[^(,)|(к.)]*') as ap1
+    
+   , l.APARTMENT, L.*, r.*
+--,  e.*
+   from ehd.building_parcel@DBLINK_DZR.ACG.RU b
+    join ehd.register@DBLINK_DZR.ACG.RU r on r.building_parcel_id = b.id 
+    join ehd.location@DBLINK_DZR.ACG.RU l on l.building_parcel_id = b.id 
+  --  left join ehd.egrp@DBLINK_DZR.ACG.RU e on e.num_cadnum = r.cadastral_number and e.actual is null 
+   where b.actual is null and r.cadastral_number_oks ='77:04:0001018:1028' and r.cadastral_number_flat is null
+   and  Trim(Substr(lower(l.APARTMENT),Instr(Lower(l.APARTMENT),' ')+1)) = '79'
+                      
+       select regexp_substr('Квартира 11 к. 3,4,15,16', '[^(,)|(к.)]*')  from dual          |
+       
+              select regexp_substr('Квартира 11 к. 3,4,15,16', '([^,])*')  from dual               
+              
+     select   cadastral_number_kva from(       
+              
+     select   r.cadastral_number as  cadastral_number_kva
+              ,Trim(Substr(lower(l.APARTMENT),Instr(Lower(l.APARTMENT),' ')+1)) as kva,
+               DECODE(lower(TRIM(r.assftp1)),'квартира',1,0) as is_kva
+   from ehd.building_parcel@DBLINK_DZR.ACG.RU b
+    join ehd.register@DBLINK_DZR.ACG.RU r on r.building_parcel_id = b.id 
+    join ehd.location@DBLINK_DZR.ACG.RU l on l.building_parcel_id = b.id 
+    where b.actual is null 
+      and r.cadastral_number_oks ='77:04:0001018:1028'
+      and r.cadastral_number_flat is null
+    )    
+    where  kva='74'
+    and is_kva =1;          
+              
+                    
+   select * from all_tab_columns@DBLINK_DZR.ACG.RU
+where table_name like upper('%building%')         
+              
+              
+
+              
+              
+                 

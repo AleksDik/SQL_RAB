@@ -1,0 +1,149 @@
+
+insert into core_register 
+(REGISTERID, 
+REGISTERNAME,
+REGISTERDESCRIPTION, 
+ALLPRI_TABLE, 
+OBJECT_TABLE, 
+QUANT_TABLE, 
+TRACK_CHANGES_COLUMN, 
+STORAGE_TYPE, 
+OBJECT_SEQUENCE, 
+IS_VIRTUAL, 
+CONTAINS_QUANT_IN_FUTURE, 
+DB_CONNECTION_NAME, 
+TRACK_CHANGES_USERID, 
+TRACK_CHANGES_DATE, 
+IS_DELETED
+)
+select * from (
+select 
+1150 as REGISTERID,
+'Rsm2.Construction' as REGISTERNAME,
+'Объединенный объект сооружение' as REGISTERDESCRIPTION,
+null as ALLPRI_TABLE,
+'U_CONSTRUCTION_O' as OBJECT_TABLE, --
+'U_CONSTRUCTION_Q' as QUANT_TABLE , --
+null as TRACK_CHANGES_COLUMN,
+2 as STORAGE_TYPE,
+'REG_OBJECT_SEQ' as OBJECT_SEQUENCE,
+ 0 as IS_VIRTUAL, 
+ 0 as CONTAINS_QUANT_IN_FUTURE, 
+ null as DB_CONNECTION_NAME, 
+ null as TRACK_CHANGES_USERID, 
+ null as TRACK_CHANGES_DATE, 
+ null as IS_DELETED
+ from dual 
+union 
+select 
+1151 as REGISTERID,
+'Rsm2.ConstructionRel' as REGISTERNAME,
+'Объединенный объект сооружение связи' as REGISTERDESCRIPTION,
+null as ALLPRI_TABLE,
+'U_CONSTRUCTION_REL_O' as OBJECT_TABLE, --
+'U_CONSTRUCTION_REL_Q' as QUANT_TABLE , --
+null as TRACK_CHANGES_COLUMN,
+2 as STORAGE_TYPE,
+'REG_OBJECT_SEQ' as OBJECT_SEQUENCE,
+ 0 as IS_VIRTUAL, 
+ 0 as CONTAINS_QUANT_IN_FUTURE, 
+ null as DB_CONNECTION_NAME, 
+ null as TRACK_CHANGES_USERID, 
+ null as TRACK_CHANGES_DATE, 
+ null as IS_DELETED
+ from dual 
+union 
+select 
+1152 as REGISTERID,
+'Rsm2.ConstructionRelExt' as REGISTERNAME,
+'Объединенный объект сооружение множественные связи' as REGISTERDESCRIPTION,
+null as ALLPRI_TABLE,
+'U_CONSTRUCTION_REL_EXT_O' as OBJECT_TABLE, --
+'U_CONSTRUCTION_REL_EXT_Q' as QUANT_TABLE , --
+null as TRACK_CHANGES_COLUMN,
+2 as STORAGE_TYPE,
+'REG_OBJECT_SEQ' as OBJECT_SEQUENCE,
+ 0 as IS_VIRTUAL, 
+ 0 as CONTAINS_QUANT_IN_FUTURE, 
+ null as DB_CONNECTION_NAME, 
+ null as TRACK_CHANGES_USERID, 
+ null as TRACK_CHANGES_DATE, 
+ null as IS_DELETED
+ from dual 
+union 
+select 
+1153 as REGISTERID,
+'Rsm2.ConstructionParam' as REGISTERNAME,
+'Параметры сооружения (объединенный объект)' as REGISTERDESCRIPTION,
+null as ALLPRI_TABLE,
+'U_CONSTRUCTION_PARAM_O' as OBJECT_TABLE, --
+'U_CONSTRUCTION_PARAM_Q' as QUANT_TABLE , --
+null as TRACK_CHANGES_COLUMN,
+2 as STORAGE_TYPE,
+'REG_OBJECT_SEQ' as OBJECT_SEQUENCE,
+ 0 as IS_VIRTUAL, 
+ 0 as CONTAINS_QUANT_IN_FUTURE, 
+ null as DB_CONNECTION_NAME, 
+ null as TRACK_CHANGES_USERID, 
+ null as TRACK_CHANGES_DATE, 
+ null as IS_DELETED
+ from dual 
+union 
+select 
+1650 as REGISTERID,
+'Rsm2.EpConstruction' as REGISTERNAME,
+'Сооружение ручной ввод и исторические системы' as REGISTERDESCRIPTION,
+null as ALLPRI_TABLE,
+'EP_CONSTRUCTION_O' as OBJECT_TABLE, --
+'EP_CONSTRUCTION_Q' as QUANT_TABLE , --
+null as TRACK_CHANGES_COLUMN,
+2 as STORAGE_TYPE,
+'REG_OBJECT_SEQ' as OBJECT_SEQUENCE,
+ 0 as IS_VIRTUAL, 
+ 0 as CONTAINS_QUANT_IN_FUTURE, 
+ null as DB_CONNECTION_NAME, 
+ null as TRACK_CHANGES_USERID, 
+ null as TRACK_CHANGES_DATE, 
+ null as IS_DELETED
+ from dual 
+ union 
+select 
+1651 as REGISTERID,
+'Rsm2.EpConstructionAddress' as REGISTERNAME,
+'Адрес сооружения (ручной ввод и исторические системы)' as REGISTERDESCRIPTION,
+null as ALLPRI_TABLE,
+'EP_CONSTRUCTION_ADDRESS_O' as OBJECT_TABLE, --
+'EP_CONSTRUCTION_ADDRESS_Q' as QUANT_TABLE , --
+null as TRACK_CHANGES_COLUMN,
+2 as STORAGE_TYPE,
+'REG_OBJECT_SEQ' as OBJECT_SEQUENCE,
+ 0 as IS_VIRTUAL, 
+ 0 as CONTAINS_QUANT_IN_FUTURE, 
+ null as DB_CONNECTION_NAME, 
+ null as TRACK_CHANGES_USERID, 
+ null as TRACK_CHANGES_DATE, 
+ null as IS_DELETED
+ from dual 
+union 
+select 
+1653 as REGISTERID,
+'Rsm2.EpConstructionParam' as REGISTERNAME,
+'Параметры сооружения ручной ввод и исторические системы' as REGISTERDESCRIPTION,
+null as ALLPRI_TABLE,
+'EP_CONSTRUCTION_PARAM_O' as OBJECT_TABLE, --
+'EP_CONSTRUCTION_PARAM_Q' as QUANT_TABLE , --
+null as TRACK_CHANGES_COLUMN,
+2 as STORAGE_TYPE,
+'REG_OBJECT_SEQ' as OBJECT_SEQUENCE,
+ 0 as IS_VIRTUAL, 
+ 0 as CONTAINS_QUANT_IN_FUTURE, 
+ null as DB_CONNECTION_NAME, 
+ null as TRACK_CHANGES_USERID, 
+ null as TRACK_CHANGES_DATE, 
+ null as IS_DELETED
+ from dual  
+ ) ;
+--union 
+-- select a.* from core_register a
+--order by registerid desc
+

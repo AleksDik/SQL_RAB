@@ -1,0 +1,57 @@
+
+select * from CORE_REFERENCE cr
+order by cr.referenceid desc;
+
+select * from CORE_REFERENCE_ITEM cr
+where cr.referenceid = 2049;
+
+insert into CORE_REFERENCE 
+(REFERENCEID, DESCRIPTION, READONLY, PROGID, DEFAULTVALUE, NAME, REGISTER_ID, SIMPLE_VALUES, ISTREE)
+select
+2049 as REFERENCEID, 
+ 'Самострой - ОСЗ или пристройка'  as DESCRIPTION, 
+1 as READONLY,
+'Core.RefLib.Executors.ReferenceExecutor' as  PROGID, 
+null as DEFAULTVALUE, 
+null as NAME, 
+null as REGISTER_ID, 
+null as SIMPLE_VALUES,
+0 as  ISTREE
+from dual;
+
+
+insert into CORE_REFERENCE_ITEM 
+(ITEMID, REFERENCEID, CODE, VALUE, SHORT_TITLE, IS_ARCHIVES, USER_NAME, DATE_END_CHANGE, DATE_S, FLAG, NAME, REGISTER_ID)
+select * from (
+select
+20490001 as ITEMID, 
+2049  as REFERENCEID, 
+null as CODE, 
+'Отдельно-стоящее здание' as VALUE, 
+'ОСЗ' as SHORT_TITLE, 
+null as IS_ARCHIVES, 
+null as USER_NAME, 
+null as DATE_END_CHANGE, 
+null as DATE_S, 
+null as FLAG, 
+'SqDetachedBuilding' as NAME, 
+null as REGISTER_ID
+from dual
+union
+select
+20490002 as ITEMID, 
+2049  as REFERENCEID, 
+null as CODE, 
+'Пристройка' as VALUE, 
+'Пристройка' as SHORT_TITLE, 
+null as IS_ARCHIVES, 
+null as USER_NAME, 
+null as DATE_END_CHANGE, 
+null as DATE_S, 
+null as FLAG, 
+'SqAttachedBuilding' as NAME, 
+null as REGISTER_ID
+from dual
+
+)
+;
