@@ -1,0 +1,176 @@
+select count(*) from ( 
+select a.affair_id, a.sqb, a.apart_id,a.calc_type, get_BTI_TOTAL_SPACE( a.apart_id) as ts from affair a
+where NVL(a.sqb,0)>0
+and a.apart_id is not null
+and NVL(get_BTI_TOTAL_SPACE( a.apart_id),0)>0
+and a.affair_stage=1
+) t
+
+where 
+NVL(t.ts,0)>0
+and
+--t.sqb<>NVL(t.ts,0) --3314
+t.sqb=NVL(t.ts,0) -- 174659, 173715
+--and t.calc_type = 0
+                 
+select 
+a.affair_id, 
+a.apart_id, 
+a.affair_stage,
+a.calc_type,
+NVL(get_Is_BTI_hostel_kurs3_not(a.apart_id,a.affair_id,a.affair_stage,1),2) as Not_Eq_bti,
+a.sqo,
+a.sqb,
+NVL(get_BTI_TOTAL_SPACE( a.apart_id),0) as sqb_r,
+--(select ap.total_space_wo from apartment ap where ap.apart_id=a.apart_id) as total_space_wo,
+a.sqz,
+a.sql,
+a.sqi,
+a.creation_date,
+a.* 
+from affair a
+where
+a.apart_id is not null
+and a.okrug_id>=51 and a.okrug_id<=60
+and a.affair_stage in (1,0)
+and  a.creation_date >= cast('01.09.2012' as date)
+and a.sq_type not in (1,4,6) -- коммунальная квартира,  квартира гостиничного типа, коридорная система
+and NVL(a.calc_type,0) = 1 -- расчет автомат (1-ручн)                                                                              
+--and NVL(get_Is_BTI_hostel_kurs3_not(a.apart_id,a.affair_id,a.affair_stage,1),2) in (1,2) --(0,1) -- 0 нет расхождений с бти ; 1-расхождение с дан. БТИ (общаги по бти), 2- нет unom/unkv
+and ((NVL(a.sqb,-1) > 0) or --есть общая квартиты без летних 
+     (NVL(get_BTI_TOTAL_SPACE( a.apart_id),0)>0) -- или общую квартиты без летних можно посчитать
+    )
+and ((NVL(a.sqz,-1)<=0) or 
+     (NVL(a.sql,-1)<=0) 
+    )
+--and NVL(a.sqo,-1) <= 0 нет таких
+order by a.creation_date   ;          
+  select * from TMP_AFFAIR_SPACE_UP;
+
+
+SELECT --rd.affair_id, rd.affair_stage , rd.building_id, rd.apart_id, 
+count(r.room_num) as cr, count(r.km_bti) as c , count (r.kmi_bti) as ci
+        FROM affair a, room r, room_delo rd
+        WHERE    a.affair_id = rd.affair_id   
+             AND a.apart_id =  rd.apart_id  
+             AND a.affair_stage = rd.affair_stage
+             AND a.okrug_id = rd.okrug_id
+             AND r.apart_id =  rd.apart_id
+             and r.building_id = rd.building_id 
+             AND r.room_num =  rd.room_num
+             AND a.affair_stage = 1
+             AND a.affair_id = 586605
+group by rd.affair_id, rd.affair_stage , rd.building_id, rd.apart_id--, rd.room_num    
+
+count(r.room_num) as cr, count(r.km_bti) as c , count (r.kmi_bti) as ci
+        FROM affair a, room r, room_delo rd
+        WHERE    a.affair_id = rd.affair_id   
+             AND a.apart_id =  rd.apart_id  
+             AND a.affair_stage = rd.affair_stage
+             AND a.okrug_id = rd.okrug_id
+             AND r.apart_id =  rd.apart_id
+             and r.building_id = rd.building_id 
+             AND r.room_num =  rd.room_num
+             AND a.affair_stage = 1
+             AND a.affair_id = 586605
+group by rd.affair_id, rd.affair_stage , rd.building_id, rd.apart_id--, rd.room_num    
+
+   
+             
+SELECT r.apart_id, r.building_id, r.sstatus, r.characteristic, ap.*
+        FROM apartment ap, room r
+        where ap.apart_id=r.apart_id
+        and r.building_id <> ap.building_id 
+
+begin
+ test_fun.UPDATE_AFFAIR_SPACE;
+end;
+
+select * from TMP_AFFAIR_SPACE_UP;
+
+
+declare c number(6,1):=0;
+begin
+select NVL(sum(r.room_space),0)into c from room r
+where r.apart_id=500821700
+group by r.apart_id;
+dbms_output.put_line('c-'||to_char(c));
+ exception
+  WHEN OTHERS THEN
+dbms_output.put_line('c-'||to_char(c));
+end;
+
+
+
+-- В процедуре 
+ select 
+    a.affair_id,
+    a.okrug_id, 
+    a.apart_id, 
+    a.affair_stage,
+    a.build_id,
+    a.calc_type,
+    NVL(get_Is_BTI_hostel_kurs3_not(a.apart_id,a.affair_id,a.affair_stage,1),2) as Not_Eq_bti,
+    a.sqo,
+    a.sqb,
+    -- считаю в теле  NVL(get_BTI_TOTAL_SPACE( a.apart_id),0) as sqb_r,
+    --(select ap.total_space_wo from apartment ap where ap.apart_id=a.apart_id) as total_space_wo,
+    a.sqz,
+    a.sql,
+    a.sqi,
+    a.creation_date
+  from affair a
+  where
+    a.okrug_id>=51 and a.okrug_id<=60 -- условие в постановке задачи
+    and a.affair_stage in (1,0)
+    and a.creation_date >= cast('01.09.2012' as date) -- условие в постановке задачи
+    and a.sq_type not in (1,4,6) -- коммунальная квартира,  квартира гостиничного типа, коридорная система
+   -- ??  
+   and NVL(a.calc_type,0) = 0 -- расчет автомат (1-ручн)                                                                              
+   -- ??  and NVL(get_Is_BTI_hostel_kurs3_not(a.apart_id,a.affair_id,a.affair_stage,1),2)=0 --in (1,2) -- =0 -- 0 - нет расхождений с бти; 1-расхождение с дан. БТИ (общаги по бти), 2- нет unom/unkv
+   /*  считаю в теле
+      and ((NVL(a.sqb,-1) > 0) or --есть общая квартиты без летних 
+         (NVL(get_BTI_TOTAL_SPACE( a.apart_id),0)>0) -- ?? или общую квартиты без летних можно посчитать
+        )
+    */    
+    and ((NVL(a.sqz,-1)<=0) or 
+         (NVL(a.sql,-1)<=0) 
+        )
+    --and NVL(a.sqo,-1) <= 0 нет таких
+    and a.affair_id=587109
+  order by a.creation_date  ; 
+            
+  rec_affair cur_affair%rowtype;
+  
+ --  
+ drop table TMP_AFFAIR_SPACE_UP;  
+begin
+ UPDATE_AFFAIR_SPACE;
+end;
+
+
+
+select (vd.sqo/vd.liv_sq) * vd.sqi  as z, (((vd.sqo-(vd.vshk+vd.blc))/vd.liv_sq) * vd.sqi)+vd.blcindelo+vd.vshkindelo
+,vd.*  
+from  V_DIFF_AFFAIR_SPACE vd
+where vd.affair_id=602890
+ 
+      
+  
+select vd.*  
+from  V_DIFF_AFFAIR_SPACE vd
+where 
+ ((NVL(vd.sqz,-1)<=0) or (NVL(vd.sql,-1)<=0))
+   and
+    ((NVL(vd.sqz,-1)<>NVL(vd.r_sqz,0)) or (NVL(vd.sql,-1)<>NVL(vd.r_sql,0)))
+and  
+vd.is_err = 0 
+
+  --and 
+  --для посмотреть все 'Oк'
+  -- and vd.is_err <> 0 --для посмотреть c ошибками
+  -- and vd.is_err in (1,2,3,4,5,6,7,8,9,10) --для посмотреть выбрать ошибки по вкусу
+  -- and  NVL(vd.calc_type,0) = 0 --  выбрать: 0 - расчет автомат. или 1 - ручн. 
+  -- and vd.affair_stage in (1,0) 
+  -- and vd.calc_type=0 -- 0 -- расчет автомат (1-ручн) 
+  -- and .....      -- доп условия  выбрать по вкусу

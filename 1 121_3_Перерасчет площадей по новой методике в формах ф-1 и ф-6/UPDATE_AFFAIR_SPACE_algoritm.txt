@@ -1,0 +1,46 @@
+Процедура экр.формы CountLivingSpace 
+(вызывается при создании, отображении формы изменении в комнатах) изменяет площади:
+
+KURS3.KURS3.GET_ROOM_DELO возвращает курсор на все room по affair_id
+1) Apartment.Living_space (LIV_SQ) : квартиры жилая 
+   Сумма  room.room_space всех комнат в apartment (по таблице room полю room.apart_id)
+    и если данная сумма <> значению поля Apartment.Living_space (LIV_SQ), то в поле
+    Apartment.Living_space (LIV_SQ)  пишется полученная сумма.
+
+2) Affair.Sqi :   жилая ЗАНИМАЕМАЯ
+(при создании affair переписывается из Apartment.LIVING_SPACE)
+в процедуре:
+    Сумма room.room_space всех комнат в affair (по таблице room_delo, признак indelo в курсоре).
+     Если данная сумма <> значению поля Affair.Sqi, то в Affair.Sqi  пишется полученная сумма.
+
+3) Затем из БТИ запрашиваются площади балконов, шкафов и т.д  для формул расчета affair.sqz и affair.sql .
+BLC_INDELO :=  ++ get_BTI_BLC_INDELO(room.apart_id, room.km_bti);
+VSHK_INDELO :=  ++ get_BTI_VSHK_INDELO(room.apart_id, room.km_bti);
+по room (по таблице room_delo, признак indelo в курсоре) 
+
+BLC  :=  get_BTI_BLC(affair .apart_id)
+VSHK :=  get_BTI_VSHK(affair .apart_id)
+
+4) Если Apartment.Living_space (LIV_SQ) <> 0  то:
+   affair.sqz = F()  
+   affair.sql   = F1().
+    Если Apartment.Living_space (LIV_SQ) = 0  то 
+   affair.sqz = 0 и  affair.sql = 0 .
+
+Affair.Sqo – общая КВАРТИРЫ 
+(при создании affair переписывается из Apartment.total_space)
+
+F()  (affair.sqz) занимаемая общая :
+(
+(Affair.Sqo - VSHK – BLC) / Apartment.Living_space (LIV_SQ) * Affair.Sqi
+)  + VSHK_INDELO + BLC_INDELO
+
+
+Affair.Sqb –  общая квартиры без летних =get_BTI_TOTAL_SPACE(:ap_id)
+
+F1()  (affair.sql) занимаемая общая без летних:
+(
+(Affair.Sqb - VSHK) / Apartment.Living_space (LIV_SQ)  * Affair.Sqi
+)  + VSHK_INDELO
+
+

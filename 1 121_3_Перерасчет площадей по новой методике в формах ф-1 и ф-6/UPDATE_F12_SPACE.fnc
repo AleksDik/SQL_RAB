@@ -1,0 +1,342 @@
+CREATE OR REPLACE FUNCTION UPDATE_F12_SPACE (p_apart_id in NUMBER, p_certificate_num in NUMBER,
+  p_sqo out number,   --  общая квартиры  Apartment.total_space
+  p_liv_sq out number, --  жилая квартиры Apartment.Living_space  
+  p_kh  out number,   --  кухни квартиры   Apartment.KITCHEN_SPACE
+  p_sqb out number,  --  общая без летних квартиры  Apartment.TOTAL_SPACE_WO  (get_BTI_TOTAL_SPACE(:ap_id))
+  p_sqz out number,  --  общая занимаемая
+  p_sqL out number,  --  общая без летних занимаемая
+  p_sqi out number,  --  жилая занимаемая
+  p_str out varchar2   -- сообщение из c_ErrStr
+) return number 
+-- 17.02.2016  Dikan (задача )  Расчет занимаемых площадей для Ф12
+--  Функция возвращает признак ошибки расчета 
+--  в out параметрах  площади
+  AS
+  type TErrStr is varray (11) of varchar2(150);
+  c_ErrStr constant TErrStr := TErrStr('нет apart_id ; перерасчет невыполнен', --1
+                                       'нет unom/unkv ; перерасчет невозможен', --2
+                                       'неизвестная ошибка ; перерасчет невозможен', --3
+                                       'нет комнат в rooms для apart_id; перерасчет невозможен ', --4
+                                       'sum(room.room_space) = 0 (LIV_SQ - жилая площадь квартиры = 0); перерасчет невозможен', --5
+                                       'нет комнат в F12, занимаемые площади = 0; перерасчет невозможен', --6 (count(*) in ROOM_DOCUMENT = 0)
+                                       'занимаемая жилая Sqi=0 перерасчет будет неверен', --7
+                                       'общая квартиры (Sqo) и общая квартиры без летних(sqb) = 0; перерасчет будет неверен', --8
+                                       'общая квартиры (Sqo) = 0; нет смысла считать sqz (занимаемая общая)',--9
+                                       'общая квартиры без летних (sqb) = 0; нет смысла считать sqL (занимаемая общая без летних)', --10
+                                       'старая формула расчета (KM_BTI/KMI_BTI - нет)' --11
+                                       );
+  err_idx integer  := 0; -- собств. код ошибки процедуры - индекс в c_ErrStr 0 - нет ошибок
+/* TEST
+  c_CreateStr constant varchar2(500):='create table TMP_F12_SPACE_UP (certificate_num  NUMBER(8) not null,'||
+                                      ' apart_id NUMBER(8) not null, space_type NUMBER(1),room_count number(8), liv_sq NUMBER(8,3),'||
+                                      ' sqo NUMBER(6,1), sqb NUMBER(8,3), sqz  NUMBER(8,1), sqL  NUMBER(8,1), sqi  NUMBER(8,1),'||
+                                      ' is_err NUMBER default 0, comments VARCHAR2(300),'||
+                                      ' blc number(6,1),blcInDelo number(6,1), vshk number(6,1), vshkInDelo number(6,1),'||
+                                      ' last_change DATE default sysdate not null)';
+  c_InsStr constant  varchar2(450) := 
+  'Insert into TMP_F12_SPACE_UP (certificate_num, apart_id, space_type,room_count,liv_sq, sqo,sqb,sqz,sqL,sqi,is_err,comments, blc,blcInDelo, vshk, vshkInDelo)'||
+  ' values (:p_certificate_num,:p_apart_id,:p_space_type,:room_count,:p_liv_sq,:p_sqo,:p_sqb,:p_sqz,:p_sql,:p_sqi,:p_is_err,:p_comm,:p_blc ,:p_blcInDelo, :p_vshk, :p_vshkInDelo)';
+*/
+ 
+-- рабочие перемен. --
+  c integer := 0;
+  i integer := 0;
+ -- v_str varchar2(150) := 'Ok';
+  -- v_null number := null;
+  v_space_type number := null;
+  v_building_id number := null;
+  v_precision number := 1 ;
+ -- переменные площадей --
+  v_liv_sq_tmp number(6,1) := 0;
+  v_liv_sq_bti number(8,2) := 0;
+  v_blc  number(7,2):= 0;--  площадь балконов квартиры по данным БТИ
+  v_vshk number(7,2):= 0;--  площадь встр. шкафов по данным БТИ
+  v_blcInDelo  number(7,2):= 0;--  площадь балконов  в занимаемых комнатах по данным БТИ
+  v_vshkInDelo number(7,2):= 0;--  площадь встр. шкафов в занимаемых комнатах по данным БТИ
+  v_rc number(8) := 0 ; -- кол-во комнат
+BEGIN
+  p_sqo := 0; 
+  p_liv_sq := 0;  
+  p_kh  := 0; 
+  p_sqb := 0;
+  p_sqz := 0; 
+  p_sqL := 0; 
+  p_sqi := 0; 
+  p_str := ' '; 
+ 
+ /* TEST
+ begin ----создание/чистка темповой таблицы для лога выполнения процедуры ----------
+   select count(*) into c from all_tables atn where atn.TABLE_NAME='TMP_F12_SPACE_UP';
+   if c=0 then
+    EXECUTE IMMEDIATE c_CreateStr;
+ -- else
+  --  EXECUTE IMMEDIATE 'TRUNCATE table TMP_F12_SPACE_UP';
+  end if;
+  exception
+  WHEN OTHERS THEN
+      -- raise_application_error(-20000, 'Ошибка создания/очистки table TMP_F12_SPACE_UP');
+       p_str := 'Ошибка создания/очистки table TMP_F12_SPACE_UP';
+       return (3) ;
+  end;
+ */ 
+  -- получить переменные  из  apartment   
+ begin  
+ select NVL(a.living_space,0), NVL(a.total_space,0),NVL(a.kitchen_space,0),NVL(a.total_space_wo,0), a.space_type, a.building_id
+  into v_liv_sq_tmp ,p_sqo, p_kh, p_sqb, v_space_type, v_building_id
+  from apartment a where a.apart_id=p_apart_id;
+  exception
+    WHEN NO_DATA_FOUND THEN
+     err_idx := 1; 
+     p_str := c_ErrStr(err_idx);
+     return(err_idx);
+    WHEN OTHERS THEN
+      err_idx := 3;
+      p_str := c_ErrStr(err_idx);
+      return(err_idx);
+   end;  
+ 
+   -- получить и проверить Apartment.Living_space (LIV_SQ) - жилая квартиры
+  begin
+   select sum(r.room_space) , count(r.room_num) into p_liv_sq, v_rc from room r
+   where r.apart_id = p_apart_id
+   group by r.apart_id;
+   exception
+    WHEN OTHERS THEN
+      err_idx := 4;
+   end;
+
+--Приоретет значению в поле apartment.living_space, т.к. может вручную вводили --
+   if NVL(v_liv_sq_tmp,0)=0 then 
+      select DECODE(Round(p_liv_sq,v_precision)- Trunc(p_liv_sq,v_precision-1),1,Trunc(p_liv_sq,v_precision),Round(p_liv_sq,v_precision)) into p_liv_sq from dual;   
+    else
+     p_liv_sq := v_liv_sq_tmp;
+   end if;
+   
+ /*  if NVL(p_liv_sq,0)=0 then --Надо, может вручную вводили, так в клиенте (Курс3) работает --
+       p_liv_sq := v_liv_sq_tmp;
+    else
+     select DECODE(Round(p_liv_sq,v_precision)- Trunc(p_liv_sq,v_precision-1),1,Trunc(p_liv_sq,v_precision),Round(p_liv_sq,v_precision)) into p_liv_sq from dual;   
+   end if;
+*/
+   if p_liv_sq = 0 then
+      if  err_idx <> 4 then err_idx := 5; end if;
+/* TEST      
+      EXECUTE IMMEDIATE c_InsStr
+      USING p_certificate_num,p_apart_id,v_space_type,v_rc,v_liv_sq,
+            v_sqo,v_sqb,p_sqz,p_sqL,p_sqi, err_idx, -- ошибка
+            c_ErrStr(err_idx),v_null,v_null,v_null,v_null;
+       commit;
+*/       
+      p_str := c_ErrStr(err_idx);
+      return(err_idx);        
+   end if;
+  
+--если  apartment.total_space_wo общая (без летних) площадь квартиры = 0 - получаем  по данным БТИ
+  if  p_sqb = 0 then
+      p_sqb := Nvl(get_BTI_TOTAL_SPACE(p_apart_id),0);
+  end if; 
+  if  p_sqb > 0 then
+   select DECODE(Round(p_sqb,v_precision)- Trunc(p_sqb,v_precision-1),1,Trunc(p_sqb,v_precision),Round(p_sqb,v_precision)) into p_sqb from dual; 
+  end if;
+  
+ ---- проверка типа квартиры ---------------- 
+  i := get_Is_SPETIAL_HOSTELS(p_apart_id);
+
+  if  (v_space_type in (1,3))  -- отдельная квартира
+  and (i in (0,1,2)) -- нет доп условий
+  then -- заполняем занимаемые площади значением  площадей квартиры 
+    p_sqz :=  p_sqo;     --  общая занимаемая
+    p_sqL :=  p_sqb ;    --   общая без летних занимаемая 
+  if i=0 then --есть unom, unkv - получить и проверить жилую площадь квартиры по данным БТИ (просьба Козловой 17.03.2016)
+   v_liv_sq_bti := NVL(get_bti_LIVING_SPACE(p_apart_id),0);
+    if v_liv_sq_bti>0 then 
+      select DECODE(Round(v_liv_sq_bti,v_precision)- Trunc(v_liv_sq_bti,v_precision-1),1,Trunc(v_liv_sq_bti,v_precision),Round(v_liv_sq_bti,v_precision)) into v_liv_sq_tmp from dual;
+      if p_liv_sq<>v_liv_sq_tmp  then p_liv_sq:=v_liv_sq_tmp; end if;
+    end if;  
+  end if;  
+    
+      
+    p_sqi :=  p_liv_sq ;  --жилая занимаемая
+    if err_idx > 0 then 
+     p_str :=  c_ErrStr(err_idx); 
+    else  
+     p_str:='Ok';  
+    end if; 
+ 
+/* TEST  
+     EXECUTE IMMEDIATE c_InsStr
+      USING p_certificate_num,p_apart_id,v_space_type,v_rc,v_liv_sq,
+            v_sqo,p_sqb,p_sqz,p_sqL,p_sqi, err_idx, -- ошибка
+            p_str,v_null,v_null,v_null,v_null;
+       commit; 
+ */      
+     return(err_idx);
+  end if;
+  
+------------ коммунальная квартира ( все остальные значения v_space_type или i in (3,4,5) )----------
+
+ --  проверяем комнаты в справке
+  begin
+        select count(r.room_num) into v_rc
+              FROM    room r, ROOM_DOCUMENT rd, CERTIFICATE cr
+              WHERE   
+                   cr.certificate_num   = p_certificate_num
+                   AND rd.document_num  = cr.certificate_num
+                   AND rd.document_type = cr.type                                   
+                   and rd.building_id   = v_building_id 
+                   AND rd.apart_id      =  p_apart_id
+                   AND r.apart_id =    rd.apart_id
+                   and r.building_id = rd.building_id
+                   AND r.room_num =    rd.room_num
+        group by rd.DOCUMENT_NUM, rd.DOCUMENT_TYPE , rd.building_id, rd.apart_id ; 
+    exception
+        WHEN no_data_found THEN  v_rc := 0;
+  end;
+  if v_rc = 0 then  -- комнат в F12 нет, занимаемые площади  = 0
+     err_idx := 6;
+/*     
+      EXECUTE IMMEDIATE c_InsStr
+      USING p_certificate_num,p_apart_id,v_space_type,v_rc,v_liv_sq,
+            v_sqo,p_sqb,p_sqz,p_sqL,p_sqi, err_idx, -- ошибка
+            c_ErrStr(err_idx),v_null,v_null,v_null,v_null;
+       commit;
+*/       
+      p_str := c_ErrStr(err_idx);
+      return(err_idx);  
+  end if;
+  
+-- получаем v_Sqi : занимаемая  жилая
+    select sum(NVL(r.room_space,0)) into p_sqi
+    FROM    room r, ROOM_DOCUMENT rd, CERTIFICATE cr
+    WHERE   
+         cr.certificate_num   = p_certificate_num
+         AND rd.document_num  = cr.certificate_num
+         AND rd.document_type = cr.type                                   
+         and rd.building_id   = v_building_id 
+         AND rd.apart_id      =  p_apart_id
+         AND r.apart_id =    rd.apart_id
+         and r.building_id = rd.building_id
+         AND r.room_num =    rd.room_num
+    group by rd.DOCUMENT_NUM, rd.DOCUMENT_TYPE , rd.building_id, rd.apart_id ;
+-- p_sqi:=ROUND(NVL (p_sqi,0),1);
+ select DECODE(Round(p_sqi,v_precision)- Trunc(p_sqi,v_precision-1),1,Trunc(p_sqi,v_precision),Round(p_sqi,v_precision)) into p_sqi from dual; 
+-- посчитали Sqi  
+  if p_sqi = 0 then  -- Sqi=0 дальше расчет будет неверен
+     err_idx := 7;
+/*     
+  EXECUTE IMMEDIATE c_InsStr
+      USING p_certificate_num,p_apart_id,v_space_type,v_rc,v_liv_sq,
+            v_sqo,p_sqb,p_sqz,p_sqL,p_sqi, err_idx, -- ошибка
+            c_ErrStr(err_idx),v_null,v_null,v_null,v_null;
+       commit;
+*/       
+      p_str := c_ErrStr(err_idx);
+      return(err_idx);     
+  end if ;
+  
+  if (p_sqo = 0) -- общая квартиры
+  and (p_sqb = 0) -- общая (без летних) квартиры
+  then
+     err_idx := 8;  
+  /*   EXECUTE IMMEDIATE c_InsStr
+      USING p_certificate_num,p_apart_id,v_space_type,v_rc,v_liv_sq,
+            v_sqo,p_sqb,p_sqz,p_sqL,p_sqi, err_idx, -- ошибка
+            c_ErrStr(err_idx),v_null,v_null,v_null,v_null;
+       commit;*/
+      p_str := c_ErrStr(err_idx);
+      return(err_idx);     
+   end if;
+   
+   --  получаем площадь встр. шкафов по данным БТИ
+    v_vshk := Nvl(get_BTI_VSHK(p_apart_id),0);
+    c:=0;
+       begin
+           -- старая (при с=0) /новая (с>0) формулы расчета
+            select count(*) into c
+            FROM   room r
+            WHERE  r.apart_id   = p_apart_id
+                 and r.building_id = v_building_id
+                 and ((NVL(r.km_bti,-1) >-1)  or (NVL(r.kmi_bti,'-1') <>'-1')) ;
+            if c = 0 then
+             err_idx := 11;
+            end if;  
+       -- получаем площадь площадь балконов и встр. шкафов в занимаемых комнатах по данным БТИ
+       select NVL(sum (sr.BLC_INDELO),0),NVL(sum (sr.VSHK_INDELO),0) into v_blcInDelo ,  v_vshkInDelo
+       from (select NVL(get_BTI_BLC_INDELO(r.apart_id, r.km_bti),0)  as BLC_INDELO,
+                    NVL(get_BTI_VSHK_INDELO(r.apart_id, r.km_bti),0) as VSHK_INDELO
+       FROM    room r, ROOM_DOCUMENT rd, CERTIFICATE cr
+       WHERE   
+         cr.certificate_num   = p_certificate_num
+         AND rd.document_num  = cr.certificate_num
+         AND rd.document_type = cr.type                                   
+         and rd.building_id   = v_building_id 
+         AND rd.apart_id      = p_apart_id
+--??                   and rd.ordinal_num
+         AND r.apart_id =    rd.apart_id
+         and r.building_id = rd.building_id
+         AND r.room_num =    rd.room_num
+         and NVL(r.km_bti,-1) >-1) sr;
+       exception
+        WHEN no_data_found THEN
+           v_blcInDelo  := 0;
+           v_vshkInDelo := 0;
+     end; 
+     
+ if p_sqo > 0 then  -- имеет смысл считать  (sqz) занимаемая общая :
+   -- получаем площадь балконов квартиры по данным БТИ
+    v_blc := Nvl(get_BTI_BLC(p_apart_id),0);      
+    if c > 0 then
+      p_sqz :=(
+                ((p_sqo - v_vshk - v_blc) / p_liv_sq) *  p_sqi
+                ) + v_blcInDelo + v_vshkInDelo ;
+     else
+       p_sqz :=( p_sqo * p_sqi)/p_liv_sq;
+     end if;  
+    -- p_sqz := 
+   select  DECODE(Round(p_sqz,1)- Trunc(p_sqz,0),1,Trunc(p_sqz,1),Round(p_sqz,1)) into p_sqz from dual ;          --округлять до десятой по правилам, до едениц не округлять    
+     --p_sqz := Round(v_sqz,1);
+  else
+    p_sqz   := 0;
+    err_idx := 9;
+  end if;
+
+  if p_sqb > 0 then  -- имеет смысл считать  (sqL) занимаемая общая без летних:
+   if c > 0 then
+    p_sqL := (
+              ((p_sqb - v_vshk) / p_liv_sq)* p_sqi
+              ) + v_vshkInDelo ;
+      else
+        p_sqL :=( p_sqb * p_sqi)/p_liv_sq;
+     end if;              
+   -- p_sqL:=
+   select  DECODE(Round(p_sqL,1)- Trunc(p_sqL,0),1,Trunc(p_sqL,1),Round(p_sqL,1)) into p_sqL from dual; 
+    --Round(p_sqL,1);
+  else
+    p_sqL := 0;
+    err_idx := 10;
+  end if;     
+ 
+  if err_idx > 0 then 
+    p_str :=  c_ErrStr(err_idx); 
+  else  
+    p_str:='Ok';  
+  end if;    
+  
+/* TEST 
+   EXECUTE IMMEDIATE c_InsStr
+      USING p_certificate_num,p_apart_id,v_space_type,v_rc,v_liv_sq,
+            v_sqo,p_sqb,p_sqz,p_sqL,p_sqi, err_idx, -- ошибка
+            p_str,v_null,v_null,v_null,v_null;
+       commit;
+*/             
+ return(err_idx);
+ 
+ exception
+  WHEN OTHERS THEN
+      err_idx := 3;
+      p_str := c_ErrStr(err_idx);
+      return(err_idx);
+     
+
+END UPDATE_F12_SPACE;
+/

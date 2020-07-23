@@ -1,0 +1,57 @@
+create or replace view V_DIFF_AFFAIR_SPACE as
+-- -- 10.12.2014  Dikan (задача 1.121.3) 
+-- –результаты перерасчета площадей в  ѕ” (affair) из рабочей таблицы TMP_AFFAIR_SPACE_UP (перерасчитанные площади и/или ошибки при перерасчете)
+-- сопоставлены с инф. о площад€х в affair
+--  ѕример запроса из этого VIEW
+/*  select * from  V_DIFF_AFFAIR_SPACE vd
+  --  where
+   ((NVL(vd.sqz,-1)<=0) or (NVL(vd.sql,-1)<=0)) --в affair нет  sqz или sql
+  -- and vd.is_err = 0  --дл€ посмотреть все 'Oк'
+  -- and vd.is_err <> 0 --дл€ посмотреть c ошибками
+  -- and vd.is_err in (1,2,3,4,5,6,7,8,9,10) --дл€ посмотреть выбрать ошибки по вкусу
+  -- and  NVL(vd.calc_type,0) = 0 --  выбрать: 0 - расчет автомат. или 1 - ручн. 
+  -- and vd.affair_stage in (1,0) 
+  -- and vd.calc_type=0 -- 0 -- расчет автомат (1-ручн) 
+  -- and .....      -- доп услови€  выбрать по вкусу 
+  --and ((NVL(vd.sqz,-1)<>NVL(vd.r_sqz,0)) or (NVL(vd.sql,-1)<>NVL(vd.r_sql,0)));
+*/  
+select 
+-- в affair
+       SUBSTR (addr_apartment (a.build_id, a.apart_id), 1, 200) as  address,
+       a.affair_id,
+       a.okrug_id, 
+       a.apart_id, 
+       a.affair_stage,
+       decode (ap.space_type,a.sq_type,to_char(a.sq_type),to_char(ap.space_type)||' в apartment; '||to_char(a.sq_type)||' в affair') as sq_Type,     
+       ap.living_space as LIV_SQ, -- жила€  ¬ј–“»–џ  из apartment    
+       a.sqo,  -- обща€  ¬ј–“»–џ
+       a.sqb,  -- обща€  ¬ј–“»–џ без летних      
+       a.sqi,  -- жила€ «јЌ»ћј≈ћјя
+       a.sqz,  -- обща€ «јЌ»ћј≈ћјя
+       a.sql,  -- обща€ «јЌ»ћј≈ћјя без летних 
+
+       a.calc_type, -- 0 -- расчет автомат (1-ручн) 
+-- в промежуточной таблице       
+     --  t.affair_id as r_affair_id,
+     --  t.okrug_id as r_okrug_id, 
+     --  t.apart_id as r_apart_id, 
+    --   t.affair_stage as r_affair_stage,     
+       t.sqo as r_sqo,  -- обща€  ¬ј–“»–џ
+       t.sqb as r_sqb,  -- обща€  ¬ј–“»–џ без летних      
+       t.sqi as r_sqi,  -- жила€ «јЌ»ћј≈ћјя
+       t.sqz as r_sqz,  -- обща€ «јЌ»ћј≈ћјя
+       t.sql as r_sql,  -- обща€ «јЌ»ћј≈ћјя без летних 
+       t.is_err, -- код ошибки 0-все ок
+       t.comments,     -- описание ошибки
+      -- NVL(get_Is_BTI_hostel_kurs3_not(a.apart_id,a.affair_id,a.affair_stage,1),2) as Not_Eq_bti,
+       t.blc,        --  площадь балконов квартиры по данным Ѕ“»
+       t.blcInDelo,  --  площадь балконов  в занимаемых комнатах по данным Ѕ“»
+       t.vshk,       --  площадь встр. шкафов по данным Ѕ“»
+       t.vshkInDelo  --  площадь встр. шкафов в занимаемых комнатах по данным Ѕ“»
+from   affair a INNER JOIN TMP_AFFAIR_SPACE_UP t
+on a.affair_id = t.affair_id
+   and a.okrug_id  = t.okrug_id
+   and a.apart_id   = t.apart_id 
+   and a.affair_stage = t.affair_stage,
+   apartment ap
+where a.apart_id = ap.apart_id ;
