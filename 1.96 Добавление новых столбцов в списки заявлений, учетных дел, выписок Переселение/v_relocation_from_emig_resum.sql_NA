@@ -1,0 +1,9 @@
+create or replace view v_relocation_from_emig_resum as
+select
+RELOC.reloc_apart_id as reloc_apart_id,
+RELOC.reloc_building_id as reloc_building_id,
+GET_relocation_program(RELOC.reloc_apart_id) as RELOC_GROUP_NAME
+FROM           
+(SELECT reloc_apart_id , reloc_building_id
+ FROM v_relocation_from_emig
+ group by reloc_apart_id , reloc_building_id) RELOC
