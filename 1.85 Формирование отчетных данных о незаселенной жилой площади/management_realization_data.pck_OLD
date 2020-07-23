@@ -1,0 +1,376 @@
+create or replace package management_realization_data is
+  -- Author  : DIKAN
+  -- Created : 09.04.2013 11:12:29
+/* Purpose : Функции для формирования полей "УР территория", "УР распорядитель", "УР направление", "УР срок на реализации"
+             (ur_territory,ur_rasporyadytel,ur_direction,ur_period_for_implement) во view  "V_HOUSING_LIST"
+             [пункт плана – 1.85]
+*/
+  -- Public type declarations
+  TYPE TterritorySet IS VARRAY(4) OF varchar2(10) NOT NULL;
+  TYPE TrasporyadytelSet IS VARRAY(8) OF varchar2(8) NOT NULL;
+  TYPE TdirectionSet IS VARRAY(4) OF varchar2(20) NOT NULL;
+  TYPE TCity_ProgSet IS VARRAY(3) OF varchar2(20) NOT NULL;
+  -- Public constant declarations
+  MosOrObl_Okrug_Id constant NUMBER := 54; --Юго-Восточный АО
+  Municipal_okrug_MosOrObl constant NUMBER := 13; --Муниципальные округа в Юго-Восточном АО москвы или "Люб.поля"
+  MosObl_Okrug_Id constant NUMBER := 33; --- Моск.обл.
+  NAO_Okrug_Id    constant NUMBER := 62; -- НАО
+  TAO_Okrug_Id    constant NUMBER := 63; -- ТАО
+  -- Public variable declarations
+ Moscow_Okrug_Id_set  NUMBER_TABLE_TYPE := NUMBER_TABLE_TYPE(51,52,53,55,56,57,58,59,60,61);  
+ Moscow_building_id_in13mo_set  NUMBER_TABLE_TYPE := NUMBER_TABLE_TYPE(113, -2489, -2491, 9979, 
+                                                   -1954, -1477, -2557, -3156, -2358, 9996, 10011, 
+                                                   -2521, -2381, -2546, -2488, -2311, -2547, -2274, -3246);
+ VterritorySet TterritorySet := TterritorySet('Москва','Люб.поля','Моск.обл','ТАОиНАО');
+ VrasporyadytelSet TrasporyadytelSet := TrasporyadytelSet('УП','УР','ОПП','УАО','Гор.орг.','МСГ','ЦАЖ','ФО');
+ VdirectionSet TdirectionSet := TdirectionSet('переселение','переоформление','очередники','др.направления');
+ VCity_ProgSet TCity_ProgSet := TCity_ProgSet('UR_N_PERESELENIE','UR_N_PEREOFORMLENIE','UR_N_OCHEREDNIKI');
+ Vperiod_for_implement TdirectionSet := TdirectionSet('до 3 мес','от 3 до 6 мес','от 6 мес до 1 года','более 1 года');
+ 
+-- -----------------------------"УР территория"---------------------------------------------- 
+-- Получить псевдо код территории по  free_space.freespace_id 
+-- Return: 1 - Москва , 2 - Люб.поля, 3 - Моск.обл., 4 - ТАОиНАО, 0 - Иное 
+function Get_ur_territory_num(Afreespace_id in free_space.freespace_id%type) return NUMBER;
+
+-- Получить псевдо код территории по  free_space.okrug_id и free_space.building_id 
+-- Return: 1 - Москва , 2 - Люб.поля, 3 - Моск.обл., 4 - ТАОиНАО, 0 - Иное 
+function Get_ur_territory_num(Afree_space_okrug_id in free_space.okrug_id%type,
+                              Afree_space_building_id in building.building_id%type) return NUMBER;
+
+-- Получить наименование территории по free_space.freespace_id 
+function Get_ur_territory_title(Afreespace_id in free_space.freespace_id%type) return varchar2;   
+
+-- -----------------------------"УР распорядитель"---------------------------------------------- 
+-- Получить псевдо код распорядителя по  free_space.freespace_id 
+-- Return: 1 - УП, 2 - УР,3 -ОПП,4 -УАО,5- Гор.орг.,6- МСГ,7 - ЦАЖ,8- ФО
+function Get_ur_rasporyadytel_num(Afreespace_id in free_space.freespace_id%type) return NUMBER;
+
+-- Получить наименование распорядителя по free_space.freespace_id 
+function Get_ur_rasporyadytel_title(Afreespace_id in free_space.freespace_id%type) return varchar2;  
+
+-- -----------------------------"УР направление"---------------------------------------------- 
+-- Получить псевдо код направления по  free_space.freespace_id 
+-- Return: 1- переселение,2 -переоформление,3- очередники,4 - др.направления
+function Get_ur_direction_num(Afreespace_id in free_space.freespace_id%type) return NUMBER;
+
+-- Получить наименование направления по free_space.freespace_id 
+function Get_ur_direction_title(Afreespace_id in free_space.freespace_id%type) return varchar2;
+
+-- Получить номер гор.программы  из таблици Global Parameters по free_space.freespace_id 
+function Get_City_Prog_virtual_num(Afreespace_id in free_space.freespace_id%type) return NUMBER;                         
+
+-- -----------------------------"УР срок на реализации"---------------------------------------------- 
+-- Получить псевдо код срока на реализации по  free_space.freespace_id 
+-- Return: 1 - 'до 3 мес', 2 - 'от 3 до 6 мес', 3 - 'от 6 мес до 1 года', 4 - 'более 1 года'
+function Get_period_for_implement_num(Afreespace_id in free_space.freespace_id%type) return NUMBER;
+
+-- Получить наименование срока на реализации по free_space.freespace_id 
+function Get_period_for_implement_title(Afreespace_id in free_space.freespace_id%type) return varchar2;
+
+
+end management_realization_data;
+/
+create or replace package body management_realization_data is
+
+-- Получить псевдо код территории по  free_space.freespace_id 
+-- Return: 1 - Москва , 2 - Люб.поля, 3 - Моск.обл., 4 - ТАОиНАО, 0 - Иное 
+function Get_ur_territory_num(Afreespace_id in free_space.freespace_id%type) return NUMBER
+is
+  Result_value NUMBER := 0;
+  Vfree_space_okrug_id  free_space.okrug_id%type := 0;
+  Vfree_space_building_id building.building_id%type := 0;
+begin
+ select f.okrug_id, f.building_id into Vfree_space_okrug_id, Vfree_space_building_id 
+ from free_space f 
+ where f.freespace_id = Afreespace_id
+ and   f.status in (1,2,4,5) ;
+  if NVL(Vfree_space_okrug_id,0) > 0 
+    then Result_value := Get_ur_territory_num(Vfree_space_okrug_id,Vfree_space_building_id);
+  end if;  
+ return(Result_value);
+end Get_ur_territory_num;
+   
+-- Получить псевдо код территории по  free_space.okrug_id и free_space.building_id. 
+-- Return: 1 - Москва , 2 - Люб.поля, 3 - Моск.обл., 4 - ТАОиНАО, 0 - Иное 
+function Get_ur_territory_num(Afree_space_okrug_id in free_space.okrug_id%type, Afree_space_building_id in building.building_id%type) return NUMBER 
+is
+ Result_value NUMBER := 0;
+ vMunicipal_okrug NUMBER := 0;
+begin
+ case  
+  when Afree_space_okrug_id = MosObl_Okrug_Id then Result_value := 3;
+  when Afree_space_okrug_id in (NAO_Okrug_Id,TAO_Okrug_Id) then Result_value := 4;
+  when Afree_space_okrug_id = MosOrObl_Okrug_Id then 
+   begin
+      select b.municipal_okrug into vMunicipal_okrug from building b where b.building_id = Afree_space_building_id;
+      if vMunicipal_okrug<>Municipal_okrug_MosOrObl 
+      then  Result_value := 1;
+      else begin
+                SELECT Count(column_value) into Result_value
+                FROM TABLE (cast(Moscow_building_id_in13mo_set as NUMBER_TABLE_TYPE ))
+                where column_value = Afree_space_building_id; 
+                if Result_value > 0 
+                then Result_value := 1;
+                else  Result_value := 2;
+                end if;
+           end; --begin
+      end if;  
+   end; --begin   
+  else begin
+       SELECT Count(column_value) into Result_value
+       FROM TABLE (cast(Moscow_Okrug_Id_set as NUMBER_TABLE_TYPE ))
+       where column_value = Afree_space_okrug_id; 
+       if Result_value > 0 then
+        Result_value := 1;  
+       end if;
+  end; --else 
+ end case;
+ return(Result_value);
+ 
+end Get_ur_territory_num;
+
+-- Получить наименовани территории по free_space.freespace_id 
+function Get_ur_territory_title(Afreespace_id in free_space.freespace_id%type) return varchar2
+is
+ Result_value varchar2(10) := '';
+ Vterritory_num NUMBER := 0;
+begin
+ Vterritory_num := Get_ur_territory_num(Afreespace_id);
+  if NVL(Vterritory_num,0) > 0 
+    then 
+       if VterritorySet.Exists(Vterritory_num) = TRUE
+         then Result_value := VterritorySet(Vterritory_num);
+       end if; 
+  end if;  
+ return(Result_value);
+end Get_ur_territory_title;
+
+-- Получить псевдо код распорядителя по  free_space.freespace_id 
+-- Return: 1 - УП, 2 - УР,3 -ОПП,4 -УАО,5- Гор.орг.,6- МСГ,7 - ЦАЖ,8- ФО
+function Get_ur_rasporyadytel_num(Afreespace_id in free_space.freespace_id%type) return NUMBER
+is
+ Result_value NUMBER := 0;
+ v_p8 factory.rights%type := -1;
+ v_fo NUMBER := -1;
+
+begin
+  select NVL(f.RIGHTS,-1)  into v_p8
+  from  free_space fs left join factory f on 
+        f.DEPARTMENT = fs.department 
+        and f.NUM_IN_DEPARTMENT = fs.num_in_department
+  where fs.freespace_id = Afreespace_id;
+  case  
+  when    v_p8 = 3 then Result_value := 8; -- ФО
+   when  v_p8 = 5 then Result_value := 5; --Гор.орг.
+    when  v_p8 = 12 then Result_value := 3; --ОПП
+     when  v_p8 in (30,31) then Result_value := 4; --УАО
+      when  v_p8 = 80 then Result_value := 7; --ЦАЖ
+       when  v_p8 = 81 then Result_value := 6; ---МСГ
+   when  v_p8 = 11 then
+   begin
+      select NVL(ka.fund_owner,-1) into v_fo
+      from  free_space fs left join kursiv.apartment ka on
+            fs.apart_id = ka.apart_id
+            AND fs.building_id = ka.building_id
+      where fs.freespace_id = Afreespace_id;  
+      case  
+       when v_fo = 845 then Result_value := 1; -- УП
+       when v_fo = 1089 then Result_value := 3; --ОПП
+       else  Result_value := 2; -- УР  
+      end case;    
+   end; -- begin  when  v_p8 = 11  
+   else Result_value := 0;       
+ end case; 
+  return(Result_value);
+end  Get_ur_rasporyadytel_num;
+
+
+-- Получить наименовани распорядителя по free_space.freespace_id 
+function Get_ur_rasporyadytel_title(Afreespace_id in free_space.freespace_id%type) return varchar2
+is
+ Result_value varchar2(8) := '';
+ Vrasporyadytel_num NUMBER := 0;
+begin
+ Vrasporyadytel_num := Get_ur_rasporyadytel_num(Afreespace_id);
+  if NVL(Vrasporyadytel_num,0) > 0 
+    then 
+       if VrasporyadytelSet.Exists(Vrasporyadytel_num) = TRUE
+         then Result_value := VrasporyadytelSet(Vrasporyadytel_num);
+       end if; 
+  end if;  
+ return(Result_value);
+end Get_ur_rasporyadytel_title; 
+
+-- Получить псевдо код направления по  free_space.freespace_id 
+-- Return: 1- переселение,2 -переоформление,3- очередники,4 - др.направления
+function Get_ur_direction_num(Afreespace_id in free_space.freespace_id%type) return NUMBER
+is 
+ Result_value NUMBER := 0;
+ v_p8 factory.rights%type := -1;
+ v_count NUMBER := 0;
+ v_fo NUMBER := -1;
+begin
+  select NVL(f.RIGHTS,-1)  into v_p8
+  from  free_space fs left join factory f 
+        on 
+        f.DEPARTMENT = fs.department and f.NUM_IN_DEPARTMENT = fs.num_in_department
+  where fs.freespace_id = Afreespace_id
+        and fs.Last = 1;
+ case  
+  when    v_p8 = 30 then 
+   begin 
+      v_count := Get_City_Prog_virtual_num(Afreespace_id);
+      case 
+          when v_count in (1,2,3) then Result_value := v_count;
+           /*
+           when v_count=1  then  Result_value := 1; --переселение
+           when v_count=2  then  Result_value := 2; --переоформление
+           when v_count=3  then  Result_value := 3; --очередники
+           */  
+           else Result_value := 4; -- др.направления
+      end case;  
+   end;  -- begin  when  v_p8 =30
+  when  v_p8 in (3,5) then 
+   begin
+      select Count(*) into  v_count
+      from  free_space fs , Instruction i 
+      where fs.freespace_id = Afreespace_id  
+        and fs.doc_num = i.instruction_num 
+        and ((i.direction=99 and i.target in (4,5)) or (i.direction=92 and i.target=1)) ;
+     if v_count > 0 then
+        Result_value := 2; --переоформление
+     end if;        
+   end; -- begin  when  v_p8 in (3,5)    
+  when  v_p8 = 11 then
+   begin
+      select NVL(ka.fund_owner,-1) into v_fo
+      from  free_space fs left join kursiv.apartment ka on
+            fs.apart_id = ka.apart_id
+            AND fs.building_id = ka.building_id
+      where fs.freespace_id = Afreespace_id;  
+      case  
+       when v_fo = 845 then Result_value := 1; -- переселение
+       else  Result_value := 0; 
+      end case;    
+   end; -- begin  when  v_p8 = 11  
+   else Result_value := 0;       
+ end case;         
+ return(Result_value);
+end Get_ur_direction_num; 
+
+-- Получить номер гор.программы  из таблици Global Parameters по free_space.freespace_id 
+function Get_City_Prog_virtual_num(Afreespace_id in free_space.freespace_id%type) return NUMBER
+is 
+ Result_value NUMBER := 0;
+ v_count NUMBER := 0;
+ v_Index NUMBER := 1;
+begin
+   select Count (sp.cp_num) into v_count 
+   from FS_City_Prog sp
+   where  sp.Freespace_ID = Afreespace_id ; 
+  IF v_count < 1  --для скорости проверим тока наличие в FS_City_Prog
+  then return(Result_value);
+  end if;    
+ -- проверка вхождения FS_City_Prog.cp_num в один из наборов из GLOBAL_PARAMETERS , наборы перечислены в VCity_ProgSet
+  v_Index := VCity_ProgSet.FIRST;
+  WHILE v_Index <= VCity_ProgSet.LAST 
+  LOOP
+   select Count (sp.cp_num) into v_count 
+   from FS_City_Prog sp
+   where  sp.Freespace_ID = Afreespace_id
+   and sp.cp_num in 
+   (select TO_NUMBER(sTable.n) as n from    
+         ( select  regexp_substr(
+                                (select ','||translate(VALUE,'1 ','1')||',' from GLOBAL_PARAMETERS where PARAMETER_NAME = VCity_ProgSet(v_Index)),
+                                '[^,]+',1,level
+                                ) as n from dual
+          connect by regexp_substr(
+                                   (select ','||translate(VALUE,'1 ','1')||',' from GLOBAL_PARAMETERS where PARAMETER_NAME = VCity_ProgSet(v_Index)),
+                                   '[^,]+',1,level
+                                   ) is not null
+          )sTable
+   ) ;
+       IF v_count > 0 THEN 
+        Result_value :=  v_Index;  
+        EXIT;               
+       END IF; 
+    v_Index := VCity_ProgSet.next(v_Index);    
+  END LOOP;
+  return(Result_value);
+end Get_City_Prog_virtual_num;
+
+-- Получить наименование направления по free_space.freespace_id 
+function Get_ur_direction_title(Afreespace_id in free_space.freespace_id%type) return varchar2
+is
+ Result_value varchar2(16) := '';
+ Vdirection_num NUMBER := 0;
+begin
+ Vdirection_num := Get_ur_direction_num(Afreespace_id);
+  if NVL(Vdirection_num,0) > 0 
+    then 
+       if VdirectionSet.Exists(Vdirection_num) = TRUE
+         then Result_value := VdirectionSet(Vdirection_num);
+       end if; 
+  end if;  
+ return(Result_value);
+end Get_ur_direction_title; 
+
+
+-- Получить псевдо код срока на реализации по  free_space.freespace_id 
+-- Return: 1 - 'до 3 мес', 2 - 'от 3 до 6 мес', 3 - 'от 6 мес до 1 года', 4 - 'более 1 года'
+function Get_period_for_implement_num(Afreespace_id in free_space.freespace_id%type) return NUMBER
+is 
+ Result_value NUMBER := 0;
+ vNew_Building_code Free_Space.New_Building_code%type := -1;
+ v_Interv NUMBER := 0;
+ T_date DATE := NULL;
+ S varchar2(15) := NULL; 
+begin
+ select NVL(fs.New_Building_code,-1) into vNew_Building_code
+  from Free_Space fs
+  where fs.freespace_id = Afreespace_id;
+  case  
+    when  vNew_Building_code = 0 then T_date := TRUNC (get_freespace_certif_date (Afreespace_id)); -- дата формы Ф.12
+    when  vNew_Building_code > 0 then 
+    begin  
+     S :=  get_freespace_R_P11toDep(Afreespace_id,1); --Ф4 перв. от  11_Д
+     if NVL(S,'-1')= '-1'
+       then T_date := NULL;
+       else T_date := TO_DATE(S,'dd.mm.yyyy');
+     end if;    
+    end; 
+    else T_date := NULL; 
+  end case; 
+  if T_date is NULL
+    then  return(Result_value); 
+  end if;
+   v_Interv := months_between(trunc(sysdate),T_date);
+   case  
+    when  v_Interv < 3 then Result_value := 1;
+    when  (v_Interv >= 3) and (v_Interv < 6) then Result_value := 2;  
+    when  (v_Interv >= 6) and (v_Interv <= 12) then Result_value := 3; 
+    when  v_Interv > 12 then Result_value := 4;
+    else Result_value := 0;
+   end case;  
+   return(Result_value);     
+end Get_period_for_implement_num;
+
+function Get_period_for_implement_title(Afreespace_id in free_space.freespace_id%type) return varchar2
+is
+ Result_value varchar2(20) := '';
+ V_num NUMBER := 0;
+begin
+ V_num := Get_period_for_implement_num(Afreespace_id);
+  if NVL(V_num,0) > 0 
+    then 
+       if Vperiod_for_implement.Exists(V_num) = TRUE
+         then Result_value := Vperiod_for_implement(V_num);
+       end if; 
+  end if;  
+ return(Result_value);
+end Get_period_for_implement_title; 
+
+
+
+end management_realization_data;
+/
