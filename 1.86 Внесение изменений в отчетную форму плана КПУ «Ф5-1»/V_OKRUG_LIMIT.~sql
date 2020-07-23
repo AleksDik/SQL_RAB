@@ -1,0 +1,36 @@
+CREATE OR REPLACE VIEW V_OKRUG_LIMIT AS
+/* Лимиты по округам для вычисления поля "Выполнение ТЕКУЩЕГО плана в %%" 
+  в отчете "План КПУ Ф5-1..." , поле a234 в V_PL_KPU_SUM_O_PR
+  26.04.2013 Дикан.
+*/
+select l.okrug_id as okrug_id, 
+       l.okrug_limit as okrug_limit, 
+       a.short_name1 as okrug_short_name
+From (
+  select 51 as okrug_id,  21 as okrug_limit from dual
+ union
+  select 52 as okrug_id,  44 as okrug_limit from dual
+ union 
+  select 53 as okrug_id,  53 as okrug_limit from dual
+ union
+  select 54 as okrug_id,  29 as okrug_limit from dual
+union
+  select 55 as okrug_id,  105 as okrug_limit from dual
+ union 
+  select 56 as okrug_id,  18 as okrug_limit from dual
+ union
+  select 57 as okrug_id,  20 as okrug_limit from dual
+ union
+  select 58 as okrug_id,  35 as okrug_limit from dual
+union
+  select 59 as okrug_id,  69 as okrug_limit from dual
+ union 
+  select 60 as okrug_id,  4 as okrug_limit from dual
+ union
+  select 62 as okrug_id,  1 as okrug_limit from dual
+ union
+  select 63 as okrug_id,  1 as okrug_limit from dual
+) l, area a
+where l.okrug_id=a.okrug_id;
+--GRANT SELECT ON V_OKRUG_LIMIT TO "PUBLIC";
+
